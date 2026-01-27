@@ -1,0 +1,60 @@
+version: '3'
+
+tasks:
+  build:
+    desc: Build the anker binary
+    cmds:
+      - go build -o bin/anker .
+    sources:
+      - '**/*.go'
+      - go.mod
+      - go.sum
+    generates:
+      - bin/anker
+
+  test:
+    desc: Run all tests
+    cmds:
+      - go test -v ./...
+
+  test-coverage:
+    desc: Run tests with coverage report
+    cmds:
+      - go test -v -coverprofile=coverage.out ./...
+      - go tool cover -html=coverage.out -o coverage.html
+
+  lint:
+    desc: Run linters (requires golangci-lint)
+    cmds:
+      - golangci-lint run
+
+  fmt:
+    desc: Format code
+    cmds:
+      - go fmt ./...
+
+  tidy:
+    desc: Tidy dependencies
+    cmds:
+      - go mod tidy
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -rf bin/
+      - rm -f coverage.out coverage.html
+
+  install:
+    desc: Install anker to $GOPATH/bin
+    cmds:
+      - go install .
+
+  run:
+    desc: Run anker (use -- to pass arguments, e.g. task run -- track)
+    cmds:
+      - go run . {{.CLI_ARGS}}
+
+  default:
+    desc: Build the project
+    cmds:
+      - task: build
