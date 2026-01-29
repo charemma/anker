@@ -4,12 +4,19 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charemma/anker/internal/config"
 	"github.com/charemma/anker/internal/sources"
 	"github.com/charemma/anker/internal/storage"
 	"github.com/spf13/cobra"
 )
 
+// loadConfig is a helper to load config without failing the command if config doesn't exist
+func loadConfig() (*config.Config, error) {
+	return config.Load()
+}
+
 var (
+	gitAuthors       []string
 	markdownTags     []string
 	markdownHeadings []string
 )
@@ -26,11 +33,18 @@ var sourceAddCmd = &cobra.Command{
 	Long: `Add a new data source for tracking.
 
 Supported types:
+  git      - Track git repository commits
   markdown - Track markdown files (notes, journals, etc.)
+  obsidian - Track Obsidian vault file changes
 
 Examples:
+  anker source add git .
+  anker source add git ~/code/my-project
+  anker source add git . --author user@example.com
+  anker source add git . --author foo@work.com --author bar@personal.com
   anker source add markdown ~/Obsidian/Daily
-  anker source add markdown ~/notes --tags work,done`,
+  anker source add markdown ~/notes --tags work,done
+  anker source add obsidian ~/Documents/Obsidian`,
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		sourceType := args[0]
@@ -48,6 +62,17 @@ Examples:
 		}
 
 		switch sourceType {
+		case "git":
+			// Use --author flags if provided, otherwise use config
+			if len(gitAuthors) > 0 {
+				config.Metadata["author"] = strings.Join(gitAuthors, ",")
+			} else {
+				// Fallback to global config if available
+				cfg, err := loadConfig()
+				if err == nil && cfg.AuthorEmail != "" {
+					config.Metadata["author"] = cfg.AuthorEmail
+				}
+			}
 		case "markdown":
 			if len(markdownTags) > 0 {
 				config.Metadata["tags"] = strings.Join(markdownTags, ",")
@@ -55,8 +80,10 @@ Examples:
 			if len(markdownHeadings) > 0 {
 				config.Metadata["headings"] = strings.Join(markdownHeadings, ",")
 			}
+		case "obsidian":
+			// Obsidian source has no additional metadata for now
 		default:
-			return fmt.Errorf("unsupported source type: %s", sourceType)
+			return fmt.Errorf("unsupported source type: %s (supported: git, markdown, obsidian)", sourceType)
 		}
 
 		if err := store.AddSource(config); err != nil {
@@ -101,23 +128,35 @@ var sourceListCmd = &cobra.Command{
 }
 
 var sourceRemoveCmd = &cobra.Command{
-	Use:   "remove [type] [path]",
+	Use:   "remove [path] or remove [type] [path]",
 	Short: "Remove a data source",
-	Args:  cobra.ExactArgs(2),
+	Args:  cobra.RangeArgs(1, 2),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		sourceType := args[0]
-		path := args[1]
-
 		store, err := storage.NewStore()
 		if err != nil {
 			return fmt.Errorf("failed to initialize storage: %w", err)
 		}
 
-		if err := store.RemoveSource(sourceType, path); err != nil {
-			return fmt.Errorf("failed to remove source: %w", err)
+		var sourceType, path string
+
+		if len(args) == 1 {
+			// Only path provided - find source by path
+			path = args[0]
+			removed, err := store.RemoveSourceByPath(path)
+			if err != nil {
+				return fmt.Errorf("failed to remove source: %w", err)
+			}
+			fmt.Printf("removed %s source: %s\n", removed.Type, removed.Path)
+		} else {
+			// Type and path provided
+			sourceType = args[0]
+			path = args[1]
+			if err := store.RemoveSource(sourceType, path); err != nil {
+				return fmt.Errorf("failed to remove source: %w", err)
+			}
+			fmt.Printf("removed %s source: %s\n", sourceType, path)
 		}
 
-		fmt.Printf("removed %s source: %s\n", sourceType, path)
 		return nil
 	},
 }
@@ -128,6 +167,7 @@ func init() {
 	sourceCmd.AddCommand(sourceListCmd)
 	sourceCmd.AddCommand(sourceRemoveCmd)
 
+	sourceAddCmd.Flags().StringSliceVar(&gitAuthors, "author", nil, "Git author email(s) to filter commits (can be specified multiple times)")
 	sourceAddCmd.Flags().StringSliceVar(&markdownTags, "tags", nil, "Filter markdown by tags (comma-separated)")
 	sourceAddCmd.Flags().StringSliceVar(&markdownHeadings, "headings", nil, "Filter markdown by headings (comma-separated)")
 }
