@@ -68,7 +68,7 @@ func addCommitWithDate(t *testing.T, repoPath, message, date string) {
 }
 
 func TestGitSource_Type(t *testing.T) {
-	source := NewGitSource("/path/to/repo")
+	source := NewGitSource("/path/to/repo", "")
 	if source.Type() != "git" {
 		t.Errorf("expected type 'git', got %s", source.Type())
 	}
@@ -76,7 +76,7 @@ func TestGitSource_Type(t *testing.T) {
 
 func TestGitSource_Location(t *testing.T) {
 	path := "/path/to/repo"
-	source := NewGitSource(path)
+	source := NewGitSource(path, "")
 	if source.Location() != path {
 		t.Errorf("expected location %s, got %s", path, source.Location())
 	}
@@ -115,7 +115,7 @@ func TestGitSource_Validate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repoPath := tt.setup()
-			source := NewGitSource(repoPath)
+			source := NewGitSource(repoPath, "")
 
 			err := source.Validate()
 			if tt.expectErr && err == nil {
@@ -137,7 +137,7 @@ func TestGitSource_GetEntries(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	addCommit(t, repoPath, "Third commit")
 
-	source := NewGitSource(repoPath)
+	source := NewGitSource(repoPath, "")
 
 	now := time.Now()
 	yesterday := now.Add(-24 * time.Hour)
@@ -188,7 +188,7 @@ func TestGitSource_GetEntries_TimeRange(t *testing.T) {
 	// Add recent commit
 	addCommit(t, repoPath, "Recent commit")
 
-	source := NewGitSource(repoPath)
+	source := NewGitSource(repoPath, "")
 
 	// Query only recent commits (last 24 hours)
 	now := time.Now()
@@ -213,7 +213,7 @@ func TestGitSource_GetEntries_TimeRange(t *testing.T) {
 
 func TestGitSource_GetEntries_NoCommits(t *testing.T) {
 	repoPath := setupTestRepo(t)
-	source := NewGitSource(repoPath)
+	source := NewGitSource(repoPath, "")
 
 	now := time.Now()
 	yesterday := now.Add(-24 * time.Hour)
@@ -225,5 +225,81 @@ func TestGitSource_GetEntries_NoCommits(t *testing.T) {
 
 	if len(entries) != 0 {
 		t.Fatalf("expected 0 entries, got %d", len(entries))
+	}
+}
+
+func TestGitSource_GetEntries_MultipleAuthors(t *testing.T) {
+	repoPath := setupTestRepo(t)
+
+	// Create commits from different authors
+	addCommit(t, repoPath, "Commit from test user")
+
+	// Add commit from different author
+	testFile := filepath.Join(repoPath, "test2.txt")
+	if err := os.WriteFile(testFile, []byte("content"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	commands := [][]string{
+		{"git", "add", "."},
+		{"git", "-c", "user.name=Other User", "-c", "user.email=other@example.com", "commit", "-m", "Commit from other user"},
+	}
+
+	for _, cmd := range commands {
+		c := exec.Command(cmd[0], cmd[1:]...)
+		c.Dir = repoPath
+		if err := c.Run(); err != nil {
+			t.Fatalf("failed to run %v: %v", cmd, err)
+		}
+	}
+
+	// Add another commit from a third author
+	testFile3 := filepath.Join(repoPath, "test3.txt")
+	if err := os.WriteFile(testFile3, []byte("content3"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	commands = [][]string{
+		{"git", "add", "."},
+		{"git", "-c", "user.name=Third User", "-c", "user.email=third@example.com", "commit", "-m", "Commit from third user"},
+	}
+
+	for _, cmd := range commands {
+		c := exec.Command(cmd[0], cmd[1:]...)
+		c.Dir = repoPath
+		if err := c.Run(); err != nil {
+			t.Fatalf("failed to run %v: %v", cmd, err)
+		}
+	}
+
+	now := time.Now()
+	yesterday := now.Add(-24 * time.Hour)
+
+	// Test filtering by multiple authors (comma-separated)
+	source := NewGitSource(repoPath, "test@example.com, third@example.com")
+	entries, err := source.GetEntries(yesterday, now)
+	if err != nil {
+		t.Fatalf("GetEntries failed: %v", err)
+	}
+
+	// Should only get commits from test@example.com and third@example.com
+	if len(entries) != 2 {
+		t.Fatalf("expected 2 entries, got %d", len(entries))
+	}
+
+	// Verify emails
+	emails := make(map[string]bool)
+	for _, entry := range entries {
+		emails[entry.Metadata["email"]] = true
+	}
+
+	if !emails["test@example.com"] {
+		t.Error("expected commit from test@example.com")
+	}
+	if !emails["third@example.com"] {
+		t.Error("expected commit from third@example.com")
+	}
+	if emails["other@example.com"] {
+		t.Error("should not include commit from other@example.com")
 	}
 }

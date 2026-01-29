@@ -11,12 +11,27 @@ import (
 
 // GitSource implements the Source interface for git repositories.
 type GitSource struct {
-	repoPath string
+	repoPath     string
+	authorEmails []string // optional: if set, only return commits from these authors
 }
 
 // NewGitSource creates a new Git source for the given repository path.
-func NewGitSource(repoPath string) *GitSource {
-	return &GitSource{repoPath: repoPath}
+// If authorEmails is provided (comma-separated), only commits from those authors will be included.
+func NewGitSource(repoPath, authorEmails string) *GitSource {
+	var emails []string
+	if authorEmails != "" {
+		// Split comma-separated emails and trim whitespace
+		for _, email := range strings.Split(authorEmails, ",") {
+			trimmed := strings.TrimSpace(email)
+			if trimmed != "" {
+				emails = append(emails, trimmed)
+			}
+		}
+	}
+	return &GitSource{
+		repoPath:     repoPath,
+		authorEmails: emails,
+	}
 }
 
 func (g *GitSource) Type() string {
@@ -74,6 +89,20 @@ func (g *GitSource) GetEntries(from, to time.Time) ([]sources.Entry, error) {
 			continue
 		}
 
+		// Filter by author email if specified
+		if len(g.authorEmails) > 0 {
+			found := false
+			for _, email := range g.authorEmails {
+				if parts[2] == email {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+
 		entry := sources.Entry{
 			Timestamp: timestamp,
 			Source:    "git",
@@ -98,4 +127,31 @@ func parseUnixTimestamp(s string) (time.Time, error) {
 		return time.Time{}, err
 	}
 	return time.Unix(timestamp, 0), nil
+}
+
+// GetDiff retrieves the full diff for a commit hash.
+// Returns the diff as a string, or empty string if the diff cannot be retrieved.
+func (g *GitSource) GetDiff(commitHash string) (string, error) {
+	cmd := exec.Command("git", "-C", g.repoPath, "show", "--format=", "--no-color", commitHash)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to get diff for %s: %w", commitHash, err)
+	}
+	return string(output), nil
+}
+
+// EnrichWithDiffs adds diff information to entries that have a commit hash in metadata.
+// Modifies entries in place by adding a "diff" field to their Metadata.
+func (g *GitSource) EnrichWithDiffs(entries []sources.Entry) error {
+	for i := range entries {
+		if hash, ok := entries[i].Metadata["hash"]; ok {
+			diff, err := g.GetDiff(hash)
+			if err != nil {
+				// Log warning but don't fail - continue with other entries
+				continue
+			}
+			entries[i].Metadata["diff"] = diff
+		}
+	}
+	return nil
 }

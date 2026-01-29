@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -9,9 +11,14 @@ import (
 	"github.com/charemma/anker/internal/sources"
 	"github.com/charemma/anker/internal/sources/git"
 	"github.com/charemma/anker/internal/sources/markdown"
+	"github.com/charemma/anker/internal/sources/obsidian"
 	"github.com/charemma/anker/internal/storage"
 	"github.com/charemma/anker/internal/timerange"
 	"github.com/spf13/cobra"
+)
+
+var (
+	reportFormat string
 )
 
 var reportCmd = &cobra.Command{
@@ -30,13 +37,18 @@ Time specifications:
   2025-12-01..31   Date range
   last 7 days      Relative range
 
+Output formats (--format):
+  simple           Commit messages only (default)
+  detailed         Commit messages with timestamps and stats
+  json             Structured JSON for programmatic use
+  markdown         Markdown with full diffs (for AI/documentation)
+
 Examples:
   anker report
   anker report today
-  anker report thisweek
-  anker report week 25
-  anker report 2025-12-01..2025-12-31
-  anker report last 7 days`,
+  anker report thisweek --format detailed
+  anker report "December 2025" --format markdown > report.md
+  anker report 2025-12-01..2025-12-31`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Default to "today" if no argument provided
@@ -70,19 +82,34 @@ Examples:
 		}
 
 		if len(sourceConfigs) == 0 {
-			fmt.Println("No sources configured. Use 'anker track' or 'anker source add' to get started.")
+			fmt.Println("No sources configured. Use 'anker source add' to get started.")
 			return nil
+		}
+
+		// Validate format
+		validFormats := map[string]bool{"simple": true, "detailed": true, "json": true, "markdown": true}
+		if !validFormats[reportFormat] {
+			return fmt.Errorf("invalid format: %s (must be simple, detailed, json, or markdown)", reportFormat)
 		}
 
 		// Collect entries from all sources
 		var allEntries []sources.Entry
+		var gitSources []*git.GitSource // Keep git sources for diff enrichment
 
 		for _, cfg := range sourceConfigs {
 			var source sources.Source
 
 			switch cfg.Type {
 			case "git":
-				source = git.NewGitSource(cfg.Path)
+				authorEmail := ""
+				if email, ok := cfg.Metadata["author"]; ok {
+					authorEmail = email
+				}
+				gitSource := git.NewGitSource(cfg.Path, authorEmail)
+				source = gitSource
+				if reportFormat == "markdown" {
+					gitSources = append(gitSources, gitSource)
+				}
 			case "markdown":
 				tags := []string{}
 				headings := []string{}
@@ -95,6 +122,8 @@ Examples:
 				}
 
 				source = markdown.NewMarkdownSource(cfg.Path, tags, headings)
+		case "obsidian":
+			source = obsidian.NewObsidianSource(cfg.Path)
 			default:
 				fmt.Printf("Warning: unsupported source type '%s' at %s\n", cfg.Type, cfg.Path)
 				continue
@@ -109,6 +138,33 @@ Examples:
 			allEntries = append(allEntries, entries...)
 		}
 
+		// Enrich with diffs if markdown format requested
+		if reportFormat == "markdown" {
+			for _, gitSource := range gitSources {
+				// Find entries from this git source and enrich them
+				var sourceEntries []sources.Entry
+				for _, entry := range allEntries {
+					if entry.Location == gitSource.Location() {
+						sourceEntries = append(sourceEntries, entry)
+					}
+				}
+				if err := gitSource.EnrichWithDiffs(sourceEntries); err != nil {
+					fmt.Printf("Warning: failed to enrich diffs for %s: %v\n", gitSource.Location(), err)
+				}
+				// Update entries in allEntries with enriched data
+				for i := range allEntries {
+					if allEntries[i].Location == gitSource.Location() {
+						for _, enriched := range sourceEntries {
+							if allEntries[i].Metadata["hash"] == enriched.Metadata["hash"] {
+								allEntries[i] = enriched
+								break
+							}
+						}
+					}
+				}
+			}
+		}
+
 		if len(allEntries) == 0 {
 			fmt.Printf("No activity found for %s\n", timespec)
 			return nil
@@ -119,41 +175,225 @@ Examples:
 			return allEntries[i].Timestamp.After(allEntries[j].Timestamp)
 		})
 
-		// Generate report
-		fmt.Printf("Work Summary: %s\n", timespec)
-		fmt.Printf("Period: %s to %s\n", tr.From.Format("2006-01-02 15:04"), tr.To.Format("2006-01-02 15:04"))
-		fmt.Printf("Found %d entries\n\n", len(allEntries))
+		// Generate report based on format
+		switch reportFormat {
+		case "simple":
+			return printSimpleReport(allEntries, tr, timespec)
+		case "detailed":
+			return printDetailedReport(allEntries, tr, timespec)
+		case "json":
+			return printJSONReport(allEntries, tr, timespec)
+		case "markdown":
+			return printMarkdownReport(allEntries, tr, timespec)
+		default:
+			return fmt.Errorf("unknown format: %s", reportFormat)
+		}
+	},
+}
 
-		// Group by source type
-		bySource := make(map[string][]sources.Entry)
-		for _, entry := range allEntries {
-			bySource[entry.Source] = append(bySource[entry.Source], entry)
+func printSimpleReport(allEntries []sources.Entry, tr *timerange.TimeRange, timespec string) error {
+	fmt.Printf("\n")
+	fmt.Printf("Work Report\n")
+	fmt.Printf("===========\n")
+	fmt.Printf("Period: %s - %s\n", tr.From.Format("02 Jan 2006"), tr.To.Format("02 Jan 2006"))
+	fmt.Printf("Total: %d activities\n\n", len(allEntries))
+
+	// Group by repository/source location
+	byRepo := make(map[string][]sources.Entry)
+	for _, entry := range allEntries {
+		byRepo[entry.Location] = append(byRepo[entry.Location], entry)
+	}
+
+	// Get sorted repo names
+	repos := make([]string, 0, len(byRepo))
+	for repo := range byRepo {
+		repos = append(repos, repo)
+	}
+	sort.Strings(repos)
+
+	// Print entries grouped by repository
+	for _, repoPath := range repos {
+		entries := byRepo[repoPath]
+		repoName := repoPath
+		if idx := strings.LastIndex(repoName, "/"); idx != -1 {
+			repoName = repoName[idx+1:]
 		}
 
-		// Print grouped entries
-		for sourceType, entries := range bySource {
-			fmt.Printf("=== %s (%d entries) ===\n", sourceType, len(entries))
+		// Determine source type and format header
+		if len(entries) > 0 {
+			switch entries[0].Source {
+			case "obsidian":
+				fmt.Printf("Obsidian Vault\n")
+				fmt.Printf("%s\n\n", repoName)
+			case "git":
+				fmt.Printf("Git Repository: %s\n", repoName)
+				fmt.Printf("(%s)\n\n", repoPath)
+			case "markdown":
+				fmt.Printf("Markdown Notes: %s\n", repoName)
+				fmt.Printf("(%s)\n\n", repoPath)
+			default:
+				fmt.Printf("%s\n\n", repoName)
+			}
+		}
 
-			for _, entry := range entries {
-				timestamp := entry.Timestamp.Format("Mon 15:04")
-				fmt.Printf("[%s] %s\n", timestamp, entry.Content)
+		for _, entry := range entries {
+			fmt.Printf("  • %s\n", entry.Content)
+		}
+		fmt.Println()
+	}
 
-				// Print location for context
-				if sourceType == "git" {
-					if hash, ok := entry.Metadata["hash"]; ok {
-						fmt.Printf("        %s (%s)\n", entry.Location, hash[:7])
-					}
-				} else if sourceType == "markdown" {
-					if file, ok := entry.Metadata["file"]; ok {
-						fmt.Printf("        %s\n", file)
-					}
-				}
+	return nil
+}
+
+func printDetailedReport(allEntries []sources.Entry, tr *timerange.TimeRange, timespec string) error {
+	fmt.Printf("\n")
+	fmt.Printf("Work Report (Detailed)\n")
+	fmt.Printf("======================\n")
+	fmt.Printf("Period: %s - %s\n", tr.From.Format("02 Jan 2006"), tr.To.Format("02 Jan 2006"))
+	fmt.Printf("Total: %d activities\n\n", len(allEntries))
+
+	// Group by repository
+	byRepo := make(map[string][]sources.Entry)
+	for _, entry := range allEntries {
+		byRepo[entry.Location] = append(byRepo[entry.Location], entry)
+	}
+
+	repos := make([]string, 0, len(byRepo))
+	for repo := range byRepo {
+		repos = append(repos, repo)
+	}
+	sort.Strings(repos)
+
+	for _, repoPath := range repos {
+		entries := byRepo[repoPath]
+		repoName := repoPath
+		if idx := strings.LastIndex(repoName, "/"); idx != -1 {
+			repoName = repoName[idx+1:]
+		}
+
+		// Determine source type and format header
+		if len(entries) > 0 {
+			switch entries[0].Source {
+			case "obsidian":
+				fmt.Printf("Obsidian Vault\n")
+				fmt.Printf("%s\n\n", repoName)
+			case "git":
+				fmt.Printf("Git Repository: %s\n", repoName)
+				fmt.Printf("(%s)\n\n", repoPath)
+			case "markdown":
+				fmt.Printf("Markdown Notes: %s\n", repoName)
+				fmt.Printf("(%s)\n\n", repoPath)
+			default:
+				fmt.Printf("%s\n\n", repoName)
+			}
+		}
+
+		for _, entry := range entries {
+			fmt.Printf("  %s\n", entry.Timestamp.Format("Mon Jan 2, 15:04"))
+			fmt.Printf("  %s\n", entry.Content)
+			if author, ok := entry.Metadata["author"]; ok {
+				fmt.Printf("  Author: %s\n", author)
+			}
+			if hash, ok := entry.Metadata["hash"]; ok {
+				fmt.Printf("  Commit: %s\n", hash[:8])
 			}
 			fmt.Println()
 		}
+	}
 
-		return nil
-	},
+	return nil
+}
+
+func printJSONReport(allEntries []sources.Entry, tr *timerange.TimeRange, timespec string) error {
+	type JSONReport struct {
+		Period struct {
+			From string `json:"from"`
+			To   string `json:"to"`
+		} `json:"period"`
+		Total      int              `json:"total"`
+		Activities []sources.Entry  `json:"activities"`
+	}
+
+	report := JSONReport{
+		Total:      len(allEntries),
+		Activities: allEntries,
+	}
+	report.Period.From = tr.From.Format("2006-01-02")
+	report.Period.To = tr.To.Format("2006-01-02")
+
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(report)
+}
+
+func printMarkdownReport(allEntries []sources.Entry, tr *timerange.TimeRange, timespec string) error {
+	fmt.Printf("# Work Report\n\n")
+	fmt.Printf("**Period:** %s to %s\n", tr.From.Format("2006-01-02"), tr.To.Format("2006-01-02"))
+	fmt.Printf("**Total Activities:** %d\n\n", len(allEntries))
+	fmt.Printf("---\n\n")
+	fmt.Printf("This report contains git commits with full diffs for the specified period.\n")
+	fmt.Printf("Each commit includes the message and the complete code changes.\n\n")
+
+	// Group by repository
+	byRepo := make(map[string][]sources.Entry)
+	for _, entry := range allEntries {
+		byRepo[entry.Location] = append(byRepo[entry.Location], entry)
+	}
+
+	repos := make([]string, 0, len(byRepo))
+	for repo := range byRepo {
+		repos = append(repos, repo)
+	}
+	sort.Strings(repos)
+
+	for _, repoPath := range repos {
+		entries := byRepo[repoPath]
+		repoName := repoPath
+		if idx := strings.LastIndex(repoName, "/"); idx != -1 {
+			repoName = repoName[idx+1:]
+		}
+
+		// Determine source type and format header
+		if len(entries) > 0 {
+			switch entries[0].Source {
+			case "obsidian":
+				fmt.Printf("## Obsidian Vault\n\n")
+				fmt.Printf("**%s**\n\n", repoName)
+				fmt.Printf("`%s`\n\n", repoPath)
+			case "git":
+				fmt.Printf("## Git Repository: %s\n\n", repoName)
+				fmt.Printf("`%s`\n\n", repoPath)
+			case "markdown":
+				fmt.Printf("## Markdown Notes: %s\n\n", repoName)
+				fmt.Printf("`%s`\n\n", repoPath)
+			default:
+				fmt.Printf("## %s\n\n", repoName)
+				fmt.Printf("`%s`\n\n", repoPath)
+			}
+		}
+
+		for i, entry := range entries {
+			fmt.Printf("### %d.\n\n", i+1)
+			fmt.Printf("**Date:** %s\n", entry.Timestamp.Format("2006-01-02 15:04:05"))
+			if author, ok := entry.Metadata["author"]; ok {
+				fmt.Printf("**Author:** %s\n", author)
+			}
+			if hash, ok := entry.Metadata["hash"]; ok {
+				fmt.Printf("**Hash:** `%s`\n", hash)
+			}
+			fmt.Printf("**Message:** %s\n\n", entry.Content)
+
+			if diff, ok := entry.Metadata["diff"]; ok && diff != "" {
+				fmt.Printf("**Changes:**\n\n```diff\n%s\n```\n\n", diff)
+			} else {
+				fmt.Printf("*(No diff available)*\n\n")
+			}
+
+			fmt.Printf("---\n\n")
+		}
+	}
+
+	return nil
 }
 
 func splitTrimmed(s, sep string) []string {
@@ -169,4 +409,5 @@ func splitTrimmed(s, sep string) []string {
 
 func init() {
 	rootCmd.AddCommand(reportCmd)
+	reportCmd.Flags().StringVarP(&reportFormat, "format", "f", "simple", "Output format (simple, detailed, json, markdown)")
 }
