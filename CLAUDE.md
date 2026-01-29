@@ -24,20 +24,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Focus on implementing:
 
-1. `anker track`
-   - Detect git repository root and register as git source
-   - One-time setup per repository
-
-2. `anker source`
-   - Add/list/remove data sources (git, markdown, etc.)
+1. `anker source`
+   - Add/list/remove data sources (git, markdown, obsidian, etc.)
    - Extensible source system for multiple data types
+   - Positional arguments: `anker source add git .`
 
-3. `anker today`
-   - Analyze all tracked sources
+2. `anker report`
+   - Analyze all tracked sources for a time period
+   - Flexible time specs (today, thisweek, date ranges)
    - Generate human-readable summary
-   - (not yet implemented)
 
-4. `anker note`
+3. `anker note`
    - Store one-off work notes
    - (not yet implemented)
 
@@ -46,25 +43,25 @@ Focus on implementing:
 - Language: Go
 - CLI parsing: Cobra (allows easy addition of subcommands)
 - Storage: YAML / Markdown (human-readable)
-- Build automation: Taskfile
+- Build automation: Just (wrapper) + Dagger (build logic)
 - No database, no network dependencies
 
 ## Development commands
 
 Build and run:
-- `task build` - build binary to bin/anker
-- `task run -- track` - run with arguments
-- `go run . track` - quick run without building
+- `just build` - build binary to bin/anker
+- `just build-to <path>` - build binary to custom location
+- `go run . source list` - quick run without building
 
 Testing:
-- `task test` - run all tests
-- `task test-coverage` - generate coverage report
+- `just test` - run all tests
+- `just coverage` - run tests with coverage report
 - `go test ./internal/...` - test specific package
 
 Code quality:
-- `task fmt` - format code
-- `task lint` - run linters
-- `task tidy` - tidy dependencies
+- `just lint` - run linter
+- `just check` - run all checks (test + lint + build)
+- `just clean` - remove build artifacts
 
 ## Code architecture
 
@@ -72,8 +69,8 @@ Code quality:
 main.go                  - entry point, calls cmd.Execute()
 cmd/
   root.go                - Cobra root command setup
-  track.go               - track git repositories as sources
   source.go              - manage data sources (add/list/remove)
+  report.go              - generate work summaries
 internal/
   sources/
     source.go            - Source interface + Entry/Config types
@@ -81,6 +78,8 @@ internal/
       git_source.go      - GitSource implementation (uses git log)
     markdown/
       markdown_source.go - MarkdownSource implementation (parses .md files)
+    obsidian/
+      obsidian_source.go - ObsidianSource implementation (tracks vault file changes)
   git/
     git.go               - FindRepoRoot() walks up dirs to find .git
   storage/
@@ -115,6 +114,9 @@ sources:
     metadata:
       tags: work,done
       headings: "## Work,## Done"
+  - type: obsidian
+    path: /Users/you/Obsidian/Second Brain
+    added: 2026-01-29T10:00:00+02:00
 ```
 
 ## Source system design
@@ -124,6 +126,7 @@ The source system is extensible and allows tracking work from multiple locations
 **Implemented sources:**
 - `git` - Git repositories (tracks commits via git log)
 - `markdown` - Markdown files (extracts tagged lines/sections)
+- `obsidian` - Obsidian vaults (lists modified/created files by timestamp)
 
 **Potential future sources:**
 The architecture supports any data source that can provide timestamped entries. Examples: calendar events, issue trackers, activity feeds.
@@ -148,3 +151,18 @@ The architecture supports any data source that can provide timestamped entries. 
 - Senior-engineer friendly
 
 Always prefer simple, explicit solutions over clever abstractions.
+
+## Architecture Decisions
+
+**Location:** `docs/decisions/`
+
+Key design decisions are documented here with:
+- Problem context
+- Options considered (Good/Bad lists)
+- Final decision and rationale
+
+**Format:** See [docs/decisions/TEMPLATE.md](docs/decisions/TEMPLATE.md)
+
+**When to add:** Significant architectural or UX decisions that affect future development.
+
+**Read the decisions** to understand design philosophy and past reasoning. They explain the "why" behind implementation choices.
