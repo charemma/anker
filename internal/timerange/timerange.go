@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/charemma/anker/internal/timerange/locales"
 )
 
 // TimeRange represents a time interval with a start and end time.
@@ -57,10 +59,15 @@ func NewParser(config *Config) *Parser {
 //   - "yesterday" - previous day
 //   - "thisweek" - current week
 //   - "lastweek" - previous week
+//   - "october 2025" - specific month (multilingual, case-insensitive)
+//   - "2025 october" - year first format
 //   - "week 32" - specific calendar week
 //   - "2025-12-02" - specific date
 //   - "2025-12-01..2025-12-31" - date range
 //   - "last 7 days" - relative range
+//
+// Month names are supported in multiple languages (English, German, etc.).
+// See internal/timerange/locales/ for available languages and how to add more.
 func (p *Parser) Parse(spec string) (*TimeRange, error) {
 	spec = strings.TrimSpace(strings.ToLower(spec))
 
@@ -73,6 +80,11 @@ func (p *Parser) Parse(spec string) (*TimeRange, error) {
 		return p.parseThisWeek(), nil
 	case "lastweek":
 		return p.parseLastWeek(), nil
+	}
+
+	// Try month and year: "october 2025", "2025 october"
+	if tr, ok := p.tryParseMonthYear(spec); ok {
+		return tr, nil
 	}
 
 	// Try week number: "week 32"
@@ -122,6 +134,47 @@ func (p *Parser) parseLastWeek() *TimeRange {
 	start := p.startOfWeek(lastWeek)
 	end := p.endOfWeek(lastWeek)
 	return &TimeRange{From: start, To: end}
+}
+
+func (p *Parser) tryParseMonthYear(spec string) (*TimeRange, bool) {
+	// Try "october 2025" or "oct 2025" (support unicode letters for non-English months)
+	re1 := regexp.MustCompile(`^(\p{L}+)\s+(\d{4})$`)
+	matches := re1.FindStringSubmatch(spec)
+
+	if matches == nil {
+		// Try "2025 october" or "2025 oct"
+		re2 := regexp.MustCompile(`^(\d{4})\s+(\p{L}+)$`)
+		matches = re2.FindStringSubmatch(spec)
+		if matches != nil {
+			// Swap order: matches[1] is year, matches[2] is month
+			matches = []string{matches[0], matches[2], matches[1]}
+		}
+	}
+
+	if matches == nil {
+		return nil, false
+	}
+
+	monthStr := matches[1]
+	yearStr := matches[2]
+
+	// Parse month name (full or abbreviated) using registered locales
+	month, ok := locales.ParseMonth(monthStr)
+	if !ok {
+		return nil, false
+	}
+
+	year, err := strconv.Atoi(yearStr)
+	if err != nil {
+		return nil, false
+	}
+
+	// First day of the month
+	start := time.Date(year, month, 1, 0, 0, 0, 0, time.Local)
+	// Last day of the month
+	end := time.Date(year, month+1, 0, 23, 59, 59, 999999999, time.Local)
+
+	return &TimeRange{From: start, To: end}, true
 }
 
 func (p *Parser) tryParseWeekNumber(spec string) (*TimeRange, bool) {
