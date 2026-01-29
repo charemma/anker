@@ -1,102 +1,204 @@
 # anker
 
-**anker** is a local, text-first CLI tool that helps you remember what you actually did —  
-without time tracking, productivity metrics, or background agents.
+> a fixpoint for your work
 
-> anker — a fixpoint for your work
+**anker** is a local CLI tool that helps you remember what you actually did — without time tracking, productivity metrics, or background agents.
 
-## What problem does anker solve?
+## The Problem
 
-Work happens across:
-- multiple git repositories
-- investigations, meetings, admin work
-- unplanned, ad-hoc tasks
+Work happens across multiple git repositories, scattered notes, meetings, and unplanned tasks. At the end of the day, the hard part isn't doing the work — it's **explaining and remembering what actually happened**.
 
-At the end of the day, the hard part is not *doing* the work —  
-it's **explaining and remembering what actually happened**.
-
-anker helps you reconstruct your workday **after the fact**.
-
-No timers.  
-No tracking.  
-No cloud.
-
-## Core ideas
-
-- **Deferred analysis**: work first, summarize later
-- **Explicit over implicit**: nothing is tracked automatically
-- **Local & transparent**: all data stays on your machine
-- **Text-first**: human-readable storage
-
-## Basic workflow
-
-```bash
-cd my/repo
-anker track
-
-# later
-anker today
-```
-
-For work outside repositories:
-
-```bash
-anker note "Invoice written"
-anker note "Customer call"
-```
-
-## Commands
-
-| Command | Status | Description |
-|------|--------|-------------|
-| `anker track` | ✓ | Mark current repository for later analysis |
-| `anker source add` | ✓ | Add data sources (markdown notes, etc.) |
-| `anker source list` | ✓ | List all configured sources |
-| `anker today` | planned | Generate a summary for today |
-| `anker note` | planned | Add a one-off work note |
-
-## Non-goals
-
-- No time tracking
-- No productivity scoring
-- No background daemon
-- No IDE plugins
-
-## Storage
-
-```text
-~/.anker/
-  ├── sources.yaml       - tracked git repos, markdown dirs, etc.
-  ├── entries/           - (planned) work notes
-  └── 2026/01/           - (planned) generated summaries
-```
-
-anker uses an extensible source system. Currently supported:
-- Git repositories (via `anker track`)
-- Markdown files (via `anker source add markdown`)
-- More sources planned: calendar, Jira, GitHub activity
+anker helps you reconstruct your workday after the fact.
 
 ## Philosophy
 
-anker is not a productivity tool.
+**anker does not try to optimize you.**
 
-It does not tell you how productive you were.  
-It helps you **explain your work** — to yourself or others.
+It does not tell you how productive you were, how focused you stayed, or how your time was spent.
 
-## Building
+**You cannot plan everything in advance.** Knowledge work is fundamentally unpredictable — production incidents happen, requirements change mid-sprint, bugs emerge from nowhere, colleagues need urgent help. Sometimes the best solutions come from unexpected detours.
+
+Detailed time-blocking and rigid schedules ignore this reality.
+
+**anker accepts the chaos.**
+
+It exists to help you retain orientation after the fact — to explain your work to yourself or others, not to judge it.
+
+### Core Principles
+
+- **Deferred analysis** — work first, summarize later
+- **Explicit over implicit** — nothing is tracked automatically
+- **Local & transparent** — all data stays on your machine
+- **Text-first** — human-readable storage
+
+## Getting Started
+
+### Installation
 
 ```bash
-task build          # builds to bin/anker
-task test           # run tests
-go install .        # install to $GOPATH/bin
+go install github.com/charemma/anker@latest
 ```
 
-Requires Go 1.21+ and [Task](https://taskfile.dev) for build automation.
+Or build from source:
 
----
+```bash
+git clone https://github.com/charemma/anker
+cd anker
+task build
+```
 
-Inspired by calm, explicit CLI tools like `git`, `fzf`, and `chezmoi`.
+### Quick Start
+
+```bash
+# Track your git repositories (one-time setup)
+cd ~/code/my-project
+anker source add git .
+
+# Add other data sources
+anker source add markdown ~/notes --tags work,done
+anker source add obsidian ~/Obsidian/MyVault
+
+# Generate a report
+anker report today
+```
+
+## Usage
+
+### Tracking Sources
+
+anker analyzes data from sources you explicitly configure.
+
+**Track a git repository:**
+```bash
+anker source add git ~/code/my-project
+anker source add git .  # current directory
+```
+
+**Add markdown notes:**
+```bash
+anker source add markdown ~/Obsidian/Daily --tags work,done
+anker source add markdown ~/notes --headings "## Work,## Done"
+```
+
+**Track Obsidian vault:**
+```bash
+anker source add obsidian ~/Obsidian/MyVault
+anker source add obsidian ~/Documents/"Second Brain"
+```
+
+**List and remove sources:**
+```bash
+anker source list
+anker source remove ~/code/my-project
+anker source remove git ~/code/my-project  # if path is ambiguous
+```
+
+### Generating Reports
+
+Create summaries for any time period:
+
+```bash
+anker report today
+anker report yesterday
+anker report thisweek
+anker report lastweek
+anker report 2025-12-01..2025-12-31
+anker report "last 7 days"
+anker report "week 52"
+```
+
+**Output Formats:**
+
+```bash
+anker report today --format simple      # default: bullet list
+anker report today --format detailed    # with timestamps and metadata
+anker report today --format json        # structured data
+anker report today --format markdown    # full context with diffs (for AI/docs)
+```
+
+**Integration with AI and Tools:**
+
+```bash
+# Analyze with Claude CLI
+anker report lastweek --format markdown | claude -p "Summarize my work"
+
+# Pretty display with glow
+anker report thisweek --format markdown | glow
+
+# Save and process
+anker report "December 2025" --format markdown > monthly-report.md
+glow monthly-report.md
+cat monthly-report.md | claude -p "Create release notes"
+```
+
+### Configuration
+
+anker reads your git config for author filtering:
+
+```bash
+# By default, reports only show commits by you
+git config --global user.email  # used for filtering
+
+# Override in ~/.anker/config.yaml
+week_start: monday        # or sunday
+author_email: you@work.com
+```
+
+**Custom configuration directory:**
+
+```bash
+# Set ANKER_HOME to use a different directory
+export ANKER_HOME=/path/to/custom/config
+anker report today  # uses /path/to/custom/config instead of ~/.anker
+```
+
+## Privacy & Data
+
+**anker has no default sources.**
+
+It does not monitor your system and does not collect data automatically. All sources must be explicitly configured by the user. If a source exists, it is because you asked for it.
+
+**Your data stays local:**
+- No telemetry, no analytics, no cloud sync
+- All storage in plain text files (`~/.anker/`)
+- Human-readable YAML and Markdown
+
+**Data storage:**
+```
+~/.anker/                  # or $ANKER_HOME if set
+  ├── config.yaml          # your preferences
+  ├── sources.yaml         # tracked repos and sources
+  └── entries/             # (planned) manual work notes
+```
+
+## Supported Sources
+
+- **Git repositories** — commits from tracked repos (filtered by author)
+- **Markdown files** — notes with tag or heading filters
+- **Obsidian vaults** — lists modified/created markdown files by timestamp
+- **More planned** — see [TODO.md](TODO.md) for roadmap
+
+## Development
+
+```bash
+task build              # build to bin/anker
+task test               # run all tests
+task test-coverage      # generate coverage report
+go run . report today   # run without building
+```
+
+Requires Go 1.21+ and [Task](https://taskfile.dev).
+
+**Architecture decisions:** See [docs/decisions/](docs/decisions/) for design rationale.
+
+## What anker is NOT
+
+- Not a time tracker
+- Not a productivity optimizer
+- Not a background daemon
+- Not a cloud service
+- Not a monitoring tool
 
 ## License
 
-Apache 2.0 - see [LICENSE](LICENSE) for details.
+Apache 2.0 — see [LICENSE](LICENSE) for details.
