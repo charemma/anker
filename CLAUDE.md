@@ -29,7 +29,7 @@ Focus on implementing:
    - Extensible source system for multiple data types
    - Positional arguments: `anker source add git .`
 
-2. `anker report`
+2. `anker recap`
    - Analyze all tracked sources for a time period
    - Flexible time specs (today, thisweek, date ranges)
    - Generate human-readable summary
@@ -70,7 +70,7 @@ main.go                  - entry point, calls cmd.Execute()
 cmd/
   root.go                - Cobra root command setup
   source.go              - manage data sources (add/list/remove)
-  report.go              - generate work summaries
+  recap.go              - generate work summaries
 internal/
   sources/
     source.go            - Source interface + Entry/Config types

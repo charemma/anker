@@ -59,7 +59,7 @@ anker source add markdown ~/notes --tags work,done
 anker source add obsidian ~/Obsidian/MyVault
 
 # Generate a report
-anker report today
+anker recap today
 ```
 
 ## Usage
@@ -98,35 +98,35 @@ anker source remove git ~/code/my-project  # if path is ambiguous
 Create summaries for any time period:
 
 ```bash
-anker report today
-anker report yesterday
-anker report thisweek
-anker report lastweek
-anker report 2025-12-01..2025-12-31
-anker report "last 7 days"
-anker report "week 52"
+anker recap today
+anker recap yesterday
+anker recap thisweek
+anker recap lastweek
+anker recap 2025-12-01..2025-12-31
+anker recap "last 7 days"
+anker recap "week 52"
 ```
 
 **Output Formats:**
 
 ```bash
-anker report today --format simple      # default: bullet list
-anker report today --format detailed    # with timestamps and metadata
-anker report today --format json        # structured data
-anker report today --format markdown    # full context with diffs (for AI/docs)
+anker recap today --format simple      # default: bullet list
+anker recap today --format detailed    # with timestamps and metadata
+anker recap today --format json        # structured data
+anker recap today --format markdown    # full context with diffs (for AI/docs)
 ```
 
 **Integration with AI and Tools:**
 
 ```bash
 # Analyze with Claude CLI
-anker report lastweek --format markdown | claude -p "Summarize my work"
+anker recap lastweek --format markdown | claude -p "Summarize my work"
 
 # Pretty display with glow
-anker report thisweek --format markdown | glow
+anker recap thisweek --format markdown | glow
 
 # Save and process
-anker report "December 2025" --format markdown > monthly-report.md
+anker recap "December 2025" --format markdown > monthly-report.md
 glow monthly-report.md
 cat monthly-report.md | claude -p "Create release notes"
 ```
@@ -149,7 +149,7 @@ author_email: you@work.com
 ```bash
 # Set ANKER_HOME to use a different directory
 export ANKER_HOME=/path/to/custom/config
-anker report today  # uses /path/to/custom/config instead of ~/.anker
+anker recap today  # uses /path/to/custom/config instead of ~/.anker
 ```
 
 ## Privacy & Data
