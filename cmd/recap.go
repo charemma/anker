@@ -18,13 +18,13 @@ import (
 )
 
 var (
-	reportFormat string
+	recapFormat string
 )
 
-var reportCmd = &cobra.Command{
-	Use:   "report [timespec]",
-	Short: "Generate a work summary for a time period",
-	Long: `Generate a summary of your work from tracked sources.
+var recapCmd = &cobra.Command{
+	Use:   "recap [timespec]",
+	Short: "Recap your work for a time period",
+	Long: `Recap your work from tracked sources - reconstruct what you did after the fact.
 
 Time specifications:
   today            Current day (default)
@@ -44,11 +44,11 @@ Output formats (--format):
   markdown         Markdown with full diffs (for AI/documentation)
 
 Examples:
-  anker report
-  anker report today
-  anker report thisweek --format detailed
-  anker report "December 2025" --format markdown > report.md
-  anker report 2025-12-01..2025-12-31`,
+  anker recap
+  anker recap today
+  anker recap thisweek --format detailed
+  anker recap "December 2025" --format markdown > recap.md
+  anker recap 2025-12-01..2025-12-31`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Default to "today" if no argument provided
@@ -88,8 +88,8 @@ Examples:
 
 		// Validate format
 		validFormats := map[string]bool{"simple": true, "detailed": true, "json": true, "markdown": true}
-		if !validFormats[reportFormat] {
-			return fmt.Errorf("invalid format: %s (must be simple, detailed, json, or markdown)", reportFormat)
+		if !validFormats[recapFormat] {
+			return fmt.Errorf("invalid format: %s (must be simple, detailed, json, or markdown)", recapFormat)
 		}
 
 		// Collect entries from all sources
@@ -107,7 +107,7 @@ Examples:
 				}
 				gitSource := git.NewGitSource(cfg.Path, authorEmail)
 				source = gitSource
-				if reportFormat == "markdown" {
+				if recapFormat == "markdown" {
 					gitSources = append(gitSources, gitSource)
 				}
 			case "markdown":
@@ -139,7 +139,7 @@ Examples:
 		}
 
 		// Enrich with diffs if markdown format requested
-		if reportFormat == "markdown" {
+		if recapFormat == "markdown" {
 			for _, gitSource := range gitSources {
 				// Find entries from this git source and enrich them
 				var sourceEntries []sources.Entry
@@ -176,25 +176,25 @@ Examples:
 		})
 
 		// Generate report based on format
-		switch reportFormat {
+		switch recapFormat {
 		case "simple":
-			return printSimpleReport(allEntries, tr, timespec)
+			return printSimpleRecap(allEntries, tr, timespec)
 		case "detailed":
-			return printDetailedReport(allEntries, tr, timespec)
+			return printDetailedRecap(allEntries, tr, timespec)
 		case "json":
-			return printJSONReport(allEntries, tr, timespec)
+			return printJSONRecap(allEntries, tr, timespec)
 		case "markdown":
-			return printMarkdownReport(allEntries, tr, timespec)
+			return printMarkdownRecap(allEntries, tr, timespec)
 		default:
-			return fmt.Errorf("unknown format: %s", reportFormat)
+			return fmt.Errorf("unknown format: %s", recapFormat)
 		}
 	},
 }
 
-func printSimpleReport(allEntries []sources.Entry, tr *timerange.TimeRange, timespec string) error {
+func printSimpleRecap(allEntries []sources.Entry, tr *timerange.TimeRange, timespec string) error {
 	fmt.Printf("\n")
-	fmt.Printf("Work Report\n")
-	fmt.Printf("===========\n")
+	fmt.Printf("Work Recap\n")
+	fmt.Printf("==========\n")
 	fmt.Printf("Period: %s - %s\n", tr.From.Format("02 Jan 2006"), tr.To.Format("02 Jan 2006"))
 	fmt.Printf("Total: %d activities\n\n", len(allEntries))
 
@@ -245,10 +245,10 @@ func printSimpleReport(allEntries []sources.Entry, tr *timerange.TimeRange, time
 	return nil
 }
 
-func printDetailedReport(allEntries []sources.Entry, tr *timerange.TimeRange, timespec string) error {
+func printDetailedRecap(allEntries []sources.Entry, tr *timerange.TimeRange, timespec string) error {
 	fmt.Printf("\n")
-	fmt.Printf("Work Report (Detailed)\n")
-	fmt.Printf("======================\n")
+	fmt.Printf("Work Recap (Detailed)\n")
+	fmt.Printf("=====================\n")
 	fmt.Printf("Period: %s - %s\n", tr.From.Format("02 Jan 2006"), tr.To.Format("02 Jan 2006"))
 	fmt.Printf("Total: %d activities\n\n", len(allEntries))
 
@@ -304,7 +304,7 @@ func printDetailedReport(allEntries []sources.Entry, tr *timerange.TimeRange, ti
 	return nil
 }
 
-func printJSONReport(allEntries []sources.Entry, tr *timerange.TimeRange, timespec string) error {
+func printJSONRecap(allEntries []sources.Entry, tr *timerange.TimeRange, timespec string) error {
 	type JSONReport struct {
 		Period struct {
 			From string `json:"from"`
@@ -326,12 +326,12 @@ func printJSONReport(allEntries []sources.Entry, tr *timerange.TimeRange, timesp
 	return encoder.Encode(report)
 }
 
-func printMarkdownReport(allEntries []sources.Entry, tr *timerange.TimeRange, timespec string) error {
-	fmt.Printf("# Work Report\n\n")
+func printMarkdownRecap(allEntries []sources.Entry, tr *timerange.TimeRange, timespec string) error {
+	fmt.Printf("# Work Recap\n\n")
 	fmt.Printf("**Period:** %s to %s\n", tr.From.Format("2006-01-02"), tr.To.Format("2006-01-02"))
 	fmt.Printf("**Total Activities:** %d\n\n", len(allEntries))
 	fmt.Printf("---\n\n")
-	fmt.Printf("This report contains git commits with full diffs for the specified period.\n")
+	fmt.Printf("This recap contains git commits with full diffs for the specified period.\n")
 	fmt.Printf("Each commit includes the message and the complete code changes.\n\n")
 
 	// Group by repository
@@ -408,6 +408,6 @@ func splitTrimmed(s, sep string) []string {
 }
 
 func init() {
-	rootCmd.AddCommand(reportCmd)
-	reportCmd.Flags().StringVarP(&reportFormat, "format", "f", "simple", "Output format (simple, detailed, json, markdown)")
+	rootCmd.AddCommand(recapCmd)
+	recapCmd.Flags().StringVarP(&recapFormat, "format", "f", "simple", "Output format (simple, detailed, json, markdown)")
 }

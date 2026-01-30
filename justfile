@@ -1,6 +1,11 @@
 # anker development commands
 # Thin wrapper around Dagger build system
 
+
+
+_default:
+    @just --list
+
 # Run all tests
 test:
     dagger call test --source=.
