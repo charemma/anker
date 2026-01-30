@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/charemma/anker/internal/paths"
 	"github.com/charemma/anker/internal/sources"
 	"gopkg.in/yaml.v3"
 )
@@ -28,14 +29,14 @@ type Store struct {
 }
 
 // NewStore creates a new Store instance.
-// The base directory defaults to ~/.anker
+// The base directory can be set via ANKER_HOME environment variable,
+// otherwise defaults to ~/.anker
 func NewStore() (*Store, error) {
-	home, err := os.UserHomeDir()
+	baseDir, err := paths.GetAnkerHome()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get home directory: %w", err)
+		return nil, fmt.Errorf("failed to get anker home directory: %w", err)
 	}
 
-	baseDir := filepath.Join(home, ".anker")
 	if err := os.MkdirAll(baseDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create base directory: %w", err)
 	}
@@ -142,7 +143,7 @@ func (s *Store) GetSources() ([]sources.Config, error) {
 	return registry.Sources, nil
 }
 
-// RemoveSource removes a source from the registry.
+// RemoveSource removes a source from the registry by type and path.
 func (s *Store) RemoveSource(sourceType, path string) error {
 	sourcesPath := filepath.Join(s.baseDir, "sources.yaml")
 
@@ -163,6 +164,50 @@ func (s *Store) RemoveSource(sourceType, path string) error {
 
 	registry.Sources = filtered
 	return s.saveSourceRegistry(sourcesPath, registry)
+}
+
+// RemoveSourceByPath removes a source from the registry by path only.
+// If multiple sources exist with the same path, returns an error.
+func (s *Store) RemoveSourceByPath(path string) (*sources.Config, error) {
+	sourcesPath := filepath.Join(s.baseDir, "sources.yaml")
+
+	registry, err := s.loadSourceRegistry(sourcesPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("no sources configured")
+		}
+		return nil, fmt.Errorf("failed to load source registry: %w", err)
+	}
+
+	// Find matching sources
+	var matches []sources.Config
+	var filtered []sources.Config
+	for _, src := range registry.Sources {
+		if src.Path == path {
+			matches = append(matches, src)
+		} else {
+			filtered = append(filtered, src)
+		}
+	}
+
+	if len(matches) == 0 {
+		return nil, fmt.Errorf("no source found for path: %s", path)
+	}
+
+	if len(matches) > 1 {
+		types := make([]string, len(matches))
+		for i, m := range matches {
+			types[i] = m.Type
+		}
+		return nil, fmt.Errorf("multiple sources found for path %s (%v). Use 'anker source remove <type> <path>' to specify", path, types)
+	}
+
+	registry.Sources = filtered
+	if err := s.saveSourceRegistry(sourcesPath, registry); err != nil {
+		return nil, err
+	}
+
+	return &matches[0], nil
 }
 
 func (s *Store) loadSourceRegistry(path string) (*SourceRegistry, error) {
