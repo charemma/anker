@@ -3,3 +3,7 @@ coverage.out
 coverage.html
 *.test
 *.prof
+
+# Dagger
+.dagger/
+.DS_Store
