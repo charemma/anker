@@ -6,36 +6,47 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/charemma/anker/internal/git"
+	"github.com/charemma/anker/internal/paths"
 	"github.com/charemma/anker/internal/timerange"
 	"gopkg.in/yaml.v3"
 )
 
 // Config holds user configuration for anker.
 type Config struct {
-	WeekStart string `yaml:"week_start"` // "monday" or "sunday"
+	WeekStart   string `yaml:"week_start"`   // "monday" or "sunday"
+	AuthorEmail string `yaml:"author_email"` // default git author email for filtering
 }
 
 // DefaultConfig returns the default configuration.
+// Attempts to read author email from git config.
 func DefaultConfig() *Config {
 	return &Config{
-		WeekStart: "monday",
+		WeekStart:   "monday",
+		AuthorEmail: "", // will be set from git config if available
 	}
 }
 
-// Load reads the configuration from ~/.anker/config.yaml.
+// Load reads the configuration from $ANKER_HOME/config.yaml or ~/.anker/config.yaml.
 // If the file doesn't exist, returns the default configuration.
+// If author_email is not set, attempts to read from git config.
 func Load() (*Config, error) {
-	home, err := os.UserHomeDir()
+	baseDir, err := paths.GetAnkerHome()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get home directory: %w", err)
+		return nil, fmt.Errorf("failed to get anker home directory: %w", err)
 	}
 
-	configPath := filepath.Join(home, ".anker", "config.yaml")
+	configPath := filepath.Join(baseDir, "config.yaml")
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return DefaultConfig(), nil
+			cfg := DefaultConfig()
+			// Try to get author email from git config
+			if email, err := git.GetAuthorEmail(); err == nil && email != "" {
+				cfg.AuthorEmail = email
+			}
+			return cfg, nil
 		}
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
@@ -52,17 +63,23 @@ func Load() (*Config, error) {
 	}
 	config.WeekStart = ws
 
+	// If author_email is not set, try to get from git config
+	if config.AuthorEmail == "" {
+		if email, err := git.GetAuthorEmail(); err == nil && email != "" {
+			config.AuthorEmail = email
+		}
+	}
+
 	return &config, nil
 }
 
-// Save writes the configuration to ~/.anker/config.yaml.
+// Save writes the configuration to $ANKER_HOME/config.yaml or ~/.anker/config.yaml.
 func Save(config *Config) error {
-	home, err := os.UserHomeDir()
+	baseDir, err := paths.GetAnkerHome()
 	if err != nil {
-		return fmt.Errorf("failed to get home directory: %w", err)
+		return fmt.Errorf("failed to get anker home directory: %w", err)
 	}
 
-	baseDir := filepath.Join(home, ".anker")
 	if err := os.MkdirAll(baseDir, 0755); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}

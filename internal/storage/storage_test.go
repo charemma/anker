@@ -8,10 +8,9 @@ import (
 )
 
 func TestNewStore(t *testing.T) {
-	originalHome := os.Getenv("HOME")
 	tmpDir := t.TempDir()
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", originalHome)
+	os.Setenv("ANKER_HOME", tmpDir)
+	defer os.Unsetenv("ANKER_HOME")
 
 	store, err := NewStore()
 	if err != nil {
@@ -22,14 +21,13 @@ func TestNewStore(t *testing.T) {
 		t.Error("baseDir should not be empty")
 	}
 
-	expectedBase := filepath.Join(tmpDir, ".anker")
-	if store.baseDir != expectedBase {
-		t.Errorf("expected baseDir %s, got %s", expectedBase, store.baseDir)
+	if store.baseDir != tmpDir {
+		t.Errorf("expected baseDir %s, got %s", tmpDir, store.baseDir)
 	}
 
-	info, err := os.Stat(expectedBase)
+	info, err := os.Stat(tmpDir)
 	if err != nil {
-		t.Errorf("base directory not created: %v", err)
+		t.Errorf("base directory not accessible: %v", err)
 	}
 	if !info.IsDir() {
 		t.Error("baseDir is not a directory")
