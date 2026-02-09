@@ -10,25 +10,11 @@
 
 **About this project:** anker is built in collaboration with Claude AI as a demonstration of modern AI-assisted development practices. The goal is to explore how AI can accelerate software development while producing genuinely useful tools.
 
-## The Problem
+## Why anker?
 
 Work happens across multiple git repositories, scattered notes, meetings, and unplanned tasks. At the end of the day, the hard part isn't doing the work — it's **explaining and remembering what actually happened**.
 
-anker helps you reconstruct your workday after the fact.
-
-## Philosophy
-
-**anker does not try to optimize you.**
-
-It does not tell you how productive you were, how focused you stayed, or how your time was spent.
-
-**You cannot plan everything in advance.** Knowledge work is fundamentally unpredictable — production incidents happen, requirements change mid-sprint, bugs emerge from nowhere, colleagues need urgent help. Sometimes the best solutions come from unexpected detours.
-
-Detailed time-blocking and rigid schedules ignore this reality.
-
-**anker accepts the chaos.**
-
-It exists to help you retain orientation after the fact — to explain your work to yourself or others, not to judge it.
+**anker accepts the chaos.** You cannot plan everything in advance — production incidents happen, requirements change, bugs emerge. anker helps you reconstruct your workday after the fact, without judgment or optimization.
 
 ### Core Principles
 
@@ -37,169 +23,82 @@ It exists to help you retain orientation after the fact — to explain your work
 - **Local & transparent** — all data stays on your machine
 - **Text-first** — human-readable storage
 
-## Getting Started
+## Quick Start
 
 ### Installation
 
-**Quick install (macOS/Linux):**
+**One-line install (macOS/Linux):**
 ```bash
 curl -sSL https://charemma.de/anker/install.sh | sh
 ```
 
-**Download binary manually:**
+**Or download from [GitHub Releases](https://github.com/charemma/anker/releases)**
 
-Visit [GitHub Releases](https://github.com/charemma/anker/releases) and download the binary for your platform, then:
-
-```bash
-# macOS/Linux
-tar -xzf anker_*.tar.gz
-sudo mv anker /usr/local/bin/
-
-# Verify installation
-anker --version
-```
-
-**Using Go:**
+**Or using Go:**
 ```bash
 go install github.com/charemma/anker@latest
 ```
 
-**Build from source:**
-```bash
-git clone https://github.com/charemma/anker
-cd anker
-just build
-```
-
-### Quick Start
+### Basic Usage
 
 ```bash
-# Track your git repositories (one-time setup)
-cd ~/code/my-project
+# Add your git repositories (one-time setup)
+anker source add git ~/code/my-project
 anker source add git .
-
-# Add other data sources
-anker source add markdown ~/notes --tags work,done
-anker source add obsidian ~/Obsidian/MyVault
 
 # Generate a report
 anker recap today
-```
-
-## Usage
-
-### Tracking Sources
-
-anker analyzes data from sources you explicitly configure.
-
-**Track a git repository:**
-```bash
-anker source add git ~/code/my-project
-anker source add git .  # current directory
-```
-
-**Add markdown notes:**
-```bash
-anker source add markdown ~/Obsidian/Daily --tags work,done
-anker source add markdown ~/notes --headings "## Work,## Done"
-```
-
-**Track Obsidian vault:**
-```bash
-anker source add obsidian ~/Obsidian/MyVault
-anker source add obsidian ~/Documents/"Second Brain"
-```
-
-**List and remove sources:**
-```bash
-anker source list
-anker source remove ~/code/my-project
-anker source remove git ~/code/my-project  # if path is ambiguous
-```
-
-### Generating Reports
-
-Create summaries for any time period:
-
-```bash
-anker recap today
-anker recap yesterday
 anker recap thisweek
-anker recap lastweek
-anker recap thismonth
 anker recap lastmonth
-anker recap 2025-12-01..2025-12-31
-anker recap "last 7 days"
-anker recap "week 52"
 ```
 
-**Output Formats:**
+### Example Output
 
 ```bash
-anker recap today --format simple      # default: bullet list
-anker recap today --format detailed    # with timestamps and metadata
-anker recap today --format json        # structured data
-anker recap today --format markdown    # full context with diffs (for AI/docs)
+anker recap yesterday --format simple
 ```
 
-**Integration with AI and Tools:**
+```
+2026-02-09 (2 activities)
+  • Fix authentication bug in user service
+  • Update README with installation instructions
+```
+
+### Integration with AI
 
 ```bash
-# Analyze with Claude CLI
-anker recap lastweek --format markdown | claude -p "Summarize my work"
-
 # Generate standup notes
-anker recap yesterday --format markdown | claude -p "Create concise standup notes"
+anker recap yesterday --format markdown | claude -p "Create standup notes"
 
-# Create weekly report for manager
-anker recap thisweek --format markdown | claude -p "Write a professional weekly status report"
-
-# Generate release notes from commits
-anker recap "last 2 weeks" --format markdown | claude -p "Create release notes from these commits"
-
-# Combo: analyze with AI, then render beautifully
+# Full pipeline: analyze → summarize → render
 anker recap thisweek --format markdown | claude -p "Summarize my week" | glow -p
-
-# Pretty terminal rendering
-anker recap thisweek --format markdown | glow -
-anker recap today --format markdown | bat -l markdown
-
-# Interactive pager with glow
-anker recap thisweek --format markdown | glow -p
-
-# Save and process later
-anker recap "December 2025" --format markdown > monthly-report.md
-cat monthly-report.md | glow -p
 ```
 
-### Configuration
+## Supported Data Sources
 
-anker reads your git config for author filtering:
+**The quality of anker's output depends on your data sources.** The more comprehensive your sources, the better anker can reconstruct your workday.
 
-```bash
-# By default, reports only show commits by you
-git config --global user.email  # used for filtering
+**Currently supported:**
+- **Git repositories** — commits from tracked repos
+- **Markdown files** — notes with tag or heading filters
+- **Obsidian vaults** — modified/created files by timestamp
 
-# Override in ~/.anker/config.yaml
-week_start: monday        # or sunday
-author_email: you@work.com
-```
+**Planned sources:**
+Calendar events, browser history, issue trackers (Jira, Linear, GitHub Issues), communication tools.
 
-**Custom configuration directory:**
+**We need your help!** If you have ideas for additional sources, please [open an issue](https://github.com/charemma/anker/issues) or contribute via pull request.
 
-```bash
-# Set ANKER_HOME to use a different directory
-export ANKER_HOME=/path/to/custom/config
-anker recap today  # uses /path/to/custom/config instead of ~/.anker
-```
+## Documentation
+
+- **[Usage Guide](docs/usage-guide.md)** - Complete command reference, examples, integrations
+- **[Configuration](docs/configuration.md)** - Config options, environment variables
+- **[Building & Testing](docs/building-and-testing.md)** - Build system, Dagger, CI/CD
+- **[Architecture Decisions](docs/decisions/)** - Design rationale and ADRs
+- **[Roadmap](TODO.md)** - Planned features and improvements
 
 ## Privacy & Data
 
-**anker has no default data sources.**
-
-A data source is a location anker reads from to reconstruct your work — like a git repository, a folder of markdown notes, or an Obsidian vault. anker does not monitor your system or collect data automatically.
-
-Every data source must be explicitly added by you with `anker source add`. If a source exists in your configuration, it is because you explicitly asked for it. anker only reads from locations you specify.
+**anker has no default data sources.** Every source must be explicitly added by you with `anker source add`. anker does not monitor your system or collect data automatically.
 
 **Your data stays local:**
 - No telemetry, no analytics, no cloud sync
@@ -207,54 +106,15 @@ Every data source must be explicitly added by you with `anker source add`. If a 
 - Human-readable YAML and Markdown
 - No background processes or filesystem watchers
 
-**Data storage:**
-```
-~/.anker/                  # or $ANKER_HOME if set
-  ├── config.yaml          # your preferences
-  ├── sources.yaml         # tracked repos and sources
-  └── entries/             # (planned) manual work notes
-```
+## Contributing
 
-## Supported Sources
+We're in the early stages and welcome contributions! Whether it's:
+- New data source providers
+- Bug fixes and improvements
+- Documentation enhancements
+- Feature ideas
 
-**The quality of anker's output depends on your data sources.**
-
-Data sources are the core concept of anker. The more comprehensive and accurate your sources, the better anker can reconstruct your workday. We're at the beginning of this journey and rely on community contributions to expand source coverage.
-
-**Currently supported:**
-- **Git repositories** — commits from tracked repos (filtered by author)
-- **Markdown files** — notes with tag or heading filters
-- **Obsidian vaults** — lists modified/created markdown files by timestamp
-
-**Planned sources:**
-- Calendar events (Google Calendar, Outlook, iCal)
-- Browser history (filtered by domain)
-- Issue trackers (Jira, Linear, GitHub Issues)
-- Communication (Slack, email summaries)
-- Time tracking tools (Toggl, Harvest)
-
-**Help us improve:** We need your feedback and contributions! If you have ideas for additional sources or improvements to existing ones, please [open an issue](https://github.com/charemma/anker/issues) or contribute via pull request. See [TODO.md](TODO.md) for the full roadmap.
-
-## Development
-
-**Quick start:**
-```bash
-just build              # build to bin/anker
-just test               # run all tests
-just coverage           # generate coverage report
-just check              # run all checks (test + lint + build)
-go run . recap today    # run without building
-```
-
-**Requirements:**
-- Go 1.21+
-- [Just](https://just.systems) - command runner
-- [Dagger](https://dagger.io) - for containerized builds (optional for local dev)
-
-**Documentation:**
-- [Building and Testing](docs/building-and-testing.md) - build system, Dagger, CI/CD
-- [Architecture decisions](docs/decisions/) - design rationale and ADRs
-- [TODO.md](TODO.md) - feature roadmap and planned improvements
+See our [Issue Templates](https://github.com/charemma/anker/issues/new/choose) to get started.
 
 ## What anker is NOT
 
@@ -267,3 +127,12 @@ go run . recap today    # run without building
 ## License
 
 Apache 2.0 — see [LICENSE](LICENSE) for details.
+
+---
+
+**Get started now:**
+```bash
+curl -sSL https://charemma.de/anker/install.sh | sh
+anker source add git .
+anker recap today
+```
