@@ -137,6 +137,9 @@ anker recap thisweek --format markdown | claude -p "Write a professional weekly 
 # Generate release notes from commits
 anker recap "last 2 weeks" --format markdown | claude -p "Create release notes from these commits"
 
+# Combo: analyze with AI, then render beautifully
+anker recap thisweek --format markdown | claude -p "Summarize my week" | glow -p
+
 # Pretty terminal rendering
 anker recap thisweek --format markdown | glow -
 anker recap today --format markdown | bat -l markdown
