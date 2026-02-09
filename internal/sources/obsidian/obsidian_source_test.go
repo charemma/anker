@@ -11,7 +11,9 @@ func TestObsidianSource_Validate(t *testing.T) {
 	// Create temp vault
 	tmpDir := t.TempDir()
 	vaultPath := filepath.Join(tmpDir, "test-vault")
-	os.Mkdir(vaultPath, 0755)
+	if err := os.Mkdir(vaultPath, 0755); err != nil {
+		t.Fatalf("failed to create vault: %v", err)
+	}
 
 	source := NewObsidianSource(vaultPath)
 
@@ -21,7 +23,9 @@ func TestObsidianSource_Validate(t *testing.T) {
 	}
 
 	// Create .obsidian folder
-	os.Mkdir(filepath.Join(vaultPath, ".obsidian"), 0755)
+	if err := os.Mkdir(filepath.Join(vaultPath, ".obsidian"), 0755); err != nil {
+		t.Fatalf("failed to create .obsidian: %v", err)
+	}
 
 	// Should succeed now
 	if err := source.Validate(); err != nil {
@@ -33,9 +37,15 @@ func TestObsidianSource_GetEntries(t *testing.T) {
 	// Create temp vault
 	tmpDir := t.TempDir()
 	vaultPath := filepath.Join(tmpDir, "test-vault")
-	os.Mkdir(vaultPath, 0755)
-	os.Mkdir(filepath.Join(vaultPath, ".obsidian"), 0755)
-	os.Mkdir(filepath.Join(vaultPath, "Daily Notes"), 0755)
+	if err := os.Mkdir(vaultPath, 0755); err != nil {
+		t.Fatalf("failed to create vault: %v", err)
+	}
+	if err := os.Mkdir(filepath.Join(vaultPath, ".obsidian"), 0755); err != nil {
+		t.Fatalf("failed to create .obsidian: %v", err)
+	}
+	if err := os.Mkdir(filepath.Join(vaultPath, "Daily Notes"), 0755); err != nil {
+		t.Fatalf("failed to create Daily Notes: %v", err)
+	}
 
 	now := time.Now()
 	yesterday := now.Add(-24 * time.Hour)
@@ -52,8 +62,12 @@ func TestObsidianSource_GetEntries(t *testing.T) {
 
 	for name, modTime := range files {
 		path := filepath.Join(vaultPath, name)
-		os.WriteFile(path, []byte("test content"), 0644)
-		os.Chtimes(path, modTime, modTime)
+		if err := os.WriteFile(path, []byte("test content"), 0644); err != nil {
+			t.Fatalf("failed to write %s: %v", name, err)
+		}
+		if err := os.Chtimes(path, modTime, modTime); err != nil {
+			t.Fatalf("failed to change times for %s: %v", name, err)
+		}
 	}
 
 	source := NewObsidianSource(vaultPath)
@@ -96,20 +110,38 @@ func TestObsidianSource_GetEntries(t *testing.T) {
 func TestObsidianSource_SkipHiddenFolders(t *testing.T) {
 	tmpDir := t.TempDir()
 	vaultPath := filepath.Join(tmpDir, "test-vault")
-	os.Mkdir(vaultPath, 0755)
-	os.Mkdir(filepath.Join(vaultPath, ".obsidian"), 0755)
-	os.Mkdir(filepath.Join(vaultPath, ".trash"), 0755)
+	if err := os.Mkdir(vaultPath, 0755); err != nil {
+		t.Fatalf("failed to create vault: %v", err)
+	}
+	if err := os.Mkdir(filepath.Join(vaultPath, ".obsidian"), 0755); err != nil {
+		t.Fatalf("failed to create .obsidian: %v", err)
+	}
+	if err := os.Mkdir(filepath.Join(vaultPath, ".trash"), 0755); err != nil {
+		t.Fatalf("failed to create .trash: %v", err)
+	}
 
 	now := time.Now()
 
 	// Create files in hidden folders
-	os.WriteFile(filepath.Join(vaultPath, ".obsidian", "config.md"), []byte("config"), 0644)
-	os.WriteFile(filepath.Join(vaultPath, ".trash", "deleted.md"), []byte("deleted"), 0644)
-	os.WriteFile(filepath.Join(vaultPath, "visible.md"), []byte("visible"), 0644)
+	if err := os.WriteFile(filepath.Join(vaultPath, ".obsidian", "config.md"), []byte("config"), 0644); err != nil {
+		t.Fatalf("failed to write config.md: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(vaultPath, ".trash", "deleted.md"), []byte("deleted"), 0644); err != nil {
+		t.Fatalf("failed to write deleted.md: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(vaultPath, "visible.md"), []byte("visible"), 0644); err != nil {
+		t.Fatalf("failed to write visible.md: %v", err)
+	}
 
-	os.Chtimes(filepath.Join(vaultPath, ".obsidian", "config.md"), now, now)
-	os.Chtimes(filepath.Join(vaultPath, ".trash", "deleted.md"), now, now)
-	os.Chtimes(filepath.Join(vaultPath, "visible.md"), now, now)
+	if err := os.Chtimes(filepath.Join(vaultPath, ".obsidian", "config.md"), now, now); err != nil {
+		t.Fatalf("failed to change times for config.md: %v", err)
+	}
+	if err := os.Chtimes(filepath.Join(vaultPath, ".trash", "deleted.md"), now, now); err != nil {
+		t.Fatalf("failed to change times for deleted.md: %v", err)
+	}
+	if err := os.Chtimes(filepath.Join(vaultPath, "visible.md"), now, now); err != nil {
+		t.Fatalf("failed to change times for visible.md: %v", err)
+	}
 
 	source := NewObsidianSource(vaultPath)
 

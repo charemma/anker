@@ -14,12 +14,17 @@ test:
 lint:
     dagger call lint --source=.
 
-# Build binary for current platform (macOS ARM64)
+# Build binary for current platform
+build:
+    @mkdir -p bin
+    @go build -o bin/anker .
+
+# Build binary for macOS ARM64 (via Dagger)
 build-osx:
     @mkdir -p bin
     dagger call build --source=. --goos=darwin --goarch=arm64 export --path=./bin/anker
 
-# Build binary for Linux (CI/production)
+# Build binary for Linux (CI/production via Dagger)
 build-linux:
     @mkdir -p bin
     dagger call build --source=. --goos=linux --goarch=amd64 export --path=./bin/anker
@@ -31,10 +36,6 @@ check:
 # Run tests with coverage report
 coverage:
     dagger call coverage --source=.
-
-# Show available Dagger functions
-functions:
-    dagger functions
 
 # Clean build artifacts
 clean:

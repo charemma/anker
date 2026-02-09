@@ -44,7 +44,7 @@ Or build from source:
 ```bash
 git clone https://github.com/charemma/anker
 cd anker
-task build
+just build
 ```
 
 ### Quick Start
@@ -122,13 +122,25 @@ anker recap today --format markdown    # full context with diffs (for AI/docs)
 # Analyze with Claude CLI
 anker recap lastweek --format markdown | claude -p "Summarize my work"
 
-# Pretty display with glow
-anker recap thisweek --format markdown | glow
+# Generate standup notes
+anker recap yesterday --format markdown | claude -p "Create concise standup notes"
 
-# Save and process
+# Create weekly report for manager
+anker recap thisweek --format markdown | claude -p "Write a professional weekly status report"
+
+# Generate release notes from commits
+anker recap "last 2 weeks" --format markdown | claude -p "Create release notes from these commits"
+
+# Pretty terminal rendering
+anker recap thisweek --format markdown | glow -
+anker recap today --format markdown | bat -l markdown
+
+# Interactive pager with glow
+anker recap thisweek --format markdown | glow -p
+
+# Save and process later
 anker recap "December 2025" --format markdown > monthly-report.md
-glow monthly-report.md
-cat monthly-report.md | claude -p "Create release notes"
+cat monthly-report.md | glow -p
 ```
 
 ### Configuration
@@ -180,16 +192,24 @@ It does not monitor your system and does not collect data automatically. All sou
 
 ## Development
 
+**Quick start:**
 ```bash
-task build              # build to bin/anker
-task test               # run all tests
-task test-coverage      # generate coverage report
-go run . report today   # run without building
+just build              # build to bin/anker
+just test               # run all tests
+just coverage           # generate coverage report
+just check              # run all checks (test + lint + build)
+go run . recap today    # run without building
 ```
 
-Requires Go 1.21+ and [Task](https://taskfile.dev).
+**Requirements:**
+- Go 1.21+
+- [Just](https://just.systems) - command runner
+- [Dagger](https://dagger.io) - for containerized builds (optional for local dev)
 
-**Architecture decisions:** See [docs/decisions/](docs/decisions/) for design rationale.
+**Documentation:**
+- [Building and Testing](docs/building-and-testing.md) - build system, Dagger, CI/CD
+- [Architecture decisions](docs/decisions/) - design rationale and ADRs
+- [TODO.md](TODO.md) - feature roadmap and planned improvements
 
 ## What anker is NOT
 

@@ -42,7 +42,7 @@ func (m *Anker) Lint(
 ) error {
 	_, err := dag.Container().
 		From("golang:1.24-alpine").
-		WithExec([]string{"apk", "add", "--no-cache", "git", "gcc", "musl-dev", "binutils"}).
+		WithExec([]string{"apk", "add", "--no-cache", "git", "gcc", "musl-dev", "binutils-gold"}).
 		WithExec([]string{"go", "install", "github.com/golangci/golangci-lint/cmd/golangci-lint@latest"}).
 		WithDirectory("/src", source).
 		WithWorkdir("/src").
@@ -114,6 +114,7 @@ func (m *Anker) Coverage(
 ) (string, error) {
 	return dag.Container().
 		From("golang:1.24-alpine").
+		WithExec([]string{"apk", "add", "--no-cache", "git"}).
 		WithDirectory("/src", source).
 		WithWorkdir("/src").
 		WithExec([]string{"go", "test", "-coverprofile=coverage.out", "./..."}).

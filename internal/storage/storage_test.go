@@ -155,6 +155,7 @@ func TestLoadRegistryNonExistent(t *testing.T) {
 
 	if registry == nil {
 		t.Error("registry should not be nil even on error")
+		return
 	}
 
 	if len(registry.Repos) != 0 {

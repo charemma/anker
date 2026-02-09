@@ -1,13 +1,36 @@
-# Dagger CI/CD
+# Building and Testing
 
-anker uses Dagger for reproducible, containerized builds.
+This guide covers the build system, testing workflows, and CI/CD setup for anker.
 
-For daily development, use the Just wrapper (see README.md).
+## Overview
 
-This document is for direct Dagger usage (CI, debugging, or advanced use cases).
+anker uses:
+- **Go** for compilation and native testing
+- **Just** as command runner (thin wrapper)
+- **Dagger** for reproducible, containerized builds
 
-## Installation
+For quick local development, use `just build` and `go test`. For CI-like checks, use `just check` (runs via Dagger).
 
+## Quick Reference
+
+**Local development (fast):**
+```bash
+go build -o bin/anker .      # Native build
+go test ./...                 # Native tests
+just build                    # Same as above
+```
+
+**CI checks (containerized, reproducible):**
+```bash
+just check                    # Full CI pipeline (test + lint + build)
+just test                     # Tests only (via Dagger)
+just lint                     # Linter only (via Dagger)
+just coverage                 # Coverage report (via Dagger)
+```
+
+## Dagger Setup
+
+**Installation:**
 ```bash
 # macOS/Linux
 curl -L https://dl.dagger.io/dagger/install.sh | sh
@@ -15,15 +38,13 @@ curl -L https://dl.dagger.io/dagger/install.sh | sh
 # Or via Homebrew (macOS)
 brew install dagger/tap/dagger
 
-# Verify installation
+# Verify
 dagger version
 ```
 
-## Direct Usage
+## Direct Dagger Usage
 
-For daily development, use `just` commands instead (simpler).
-
-Direct Dagger usage (all commands run from project root):
+For daily development, prefer `just` commands. Use direct Dagger calls for debugging or CI setup:
 
 ### List available functions
 ```bash

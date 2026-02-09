@@ -214,10 +214,41 @@ See [docs/decisions/0007-dcr-data-storage-strategy.md](docs/decisions/0007-dcr-d
 
 ## Technical Debt
 
-### Test Coverage
-- Add integration tests for report command
-- Test markdown source with real Obsidian vaults
-- Browser history provider tests
+### Test Coverage Roadmap
+
+**Current: 49%**
+
+Incremental coverage improvement plan:
+
+1. **Target: 60%** (Priority: High)
+   - Add tests for cmd/source.go (loadConfig, add/list/remove commands)
+   - Add tests for internal/config package (Load, Save, GetTimerangeConfig)
+   - Test git config helpers (GetAuthorEmail, GetAuthorName)
+
+2. **Target: 70%** (Priority: High)
+   - Add integration tests for recap command (all output formats)
+   - Test markdown/obsidian Type() and Location() methods
+   - Test storage AddSource/GetSources/RemoveSource methods
+
+3. **Target: 75%** (Priority: Medium)
+   - Test git diff functionality (GetDiff, EnrichWithDiffs)
+   - Test timerange locale system (ParseMonth, RegisterMonthNames)
+   - Edge cases for existing tests
+
+4. **Target: 80%** (Priority: Medium)
+   - Full integration tests for all commands
+   - Error path testing
+   - Test with real Obsidian vault structures
+
+5. **Target: 85%** (Priority: Low)
+   - Complete CLI integration tests
+   - Test all error scenarios
+   - Performance regression tests
+
+6. **Target: 90%+ (Stretch goal)**
+   - Exhaustive edge case coverage
+   - Fuzz testing for parsers
+   - Property-based testing
 
 ### Documentation
 - User guide
