@@ -12,7 +12,7 @@
 
 ## Why anker?
 
-Work happens across multiple git repositories, scattered notes, meetings, and unplanned tasks. At the end of the day, the hard part isn't doing the work — it's **explaining and remembering what actually happened**.
+Work happens across multiple git repositories, scattered notes, meetings, and unplanned tasks. At the end of the day, the hard part isn't always doing the work — it's **explaining and remembering what actually happened**.
 
 **anker accepts the chaos.** You cannot plan everything in advance — production incidents happen, requirements change, bugs emerge. anker helps you reconstruct your workday after the fact, without judgment or optimization.
 
