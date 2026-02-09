@@ -1,0 +1,106 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: anker
+    binary: anker
+    main: .
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+archives:
+  - id: anker
+    format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE
+      - README.md
+      - TODO.md
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ .Tag }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - 'merge conflict'
+      - Merge pull request
+      - Merge remote-tracking branch
+      - Merge branch
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: Bug Fixes
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: Performance Improvements
+      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: Others
+      order: 999
+
+release:
+  github:
+    owner: charemma
+    name: anker
+  draft: false
+  prerelease: auto
+  mode: replace
+  header: |
+    ## anker {{ .Tag }}
+
+    A local, text-first CLI tool that helps you remember what you actually did.
+  footer: |
+    **Full Changelog**: https://github.com/charemma/anker/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+    ## Installation
+
+    ### macOS/Linux
+    ```bash
+    # Download and extract
+    curl -L https://github.com/charemma/anker/releases/download/{{ .Tag }}/anker_{{ .Tag }}_$(uname -s)_$(uname -m).tar.gz | tar xz
+
+    # Move to PATH
+    sudo mv anker /usr/local/bin/
+    ```
+
+    ### Go Install
+    ```bash
+    go install github.com/charemma/anker@{{ .Tag }}
+    ```
+
+brews:
+  - repository:
+      owner: charemma
+      name: homebrew-tap
+    folder: Formula
+    homepage: https://github.com/charemma/anker
+    description: A local CLI tool for reconstructing your workday
+    license: Apache-2.0
+    skip_upload: auto
