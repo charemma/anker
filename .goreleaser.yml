@@ -99,7 +99,7 @@ brews:
   - repository:
       owner: charemma
       name: homebrew-tap
-    folder: Formula
+    directory: Formula
     homepage: https://github.com/charemma/anker
     description: A local CLI tool for reconstructing your workday
     license: Apache-2.0
