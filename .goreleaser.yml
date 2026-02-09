@@ -95,12 +95,13 @@ release:
     go install github.com/charemma/anker@{{ .Tag }}
     ```
 
-brews:
-  - repository:
-      owner: charemma
-      name: homebrew-tap
-    directory: Formula
-    homepage: https://github.com/charemma/anker
-    description: A local CLI tool for reconstructing your workday
-    license: Apache-2.0
-    skip_upload: auto
+# Homebrew tap - disabled for now
+# brews:
+#   - repository:
+#       owner: charemma
+#       name: homebrew-tap
+#     directory: Formula
+#     homepage: https://github.com/charemma/anker
+#     description: A local CLI tool for reconstructing your workday
+#     license: Apache-2.0
+#     skip_upload: auto

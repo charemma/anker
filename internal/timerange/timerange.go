@@ -80,6 +80,10 @@ func (p *Parser) Parse(spec string) (*TimeRange, error) {
 		return p.parseThisWeek(), nil
 	case "lastweek":
 		return p.parseLastWeek(), nil
+	case "thismonth":
+		return p.parseThisMonth(), nil
+	case "lastmonth":
+		return p.parseLastMonth(), nil
 	}
 
 	// Try month and year: "october 2025", "2025 october"
@@ -133,6 +137,21 @@ func (p *Parser) parseLastWeek() *TimeRange {
 	lastWeek := p.now.AddDate(0, 0, -7)
 	start := p.startOfWeek(lastWeek)
 	end := p.endOfWeek(lastWeek)
+	return &TimeRange{From: start, To: end}
+}
+
+func (p *Parser) parseThisMonth() *TimeRange {
+	year, month, _ := p.now.Date()
+	start := time.Date(year, month, 1, 0, 0, 0, 0, p.now.Location())
+	end := start.AddDate(0, 1, 0).Add(-time.Second)
+	return &TimeRange{From: start, To: end}
+}
+
+func (p *Parser) parseLastMonth() *TimeRange {
+	lastMonth := p.now.AddDate(0, -1, 0)
+	year, month, _ := lastMonth.Date()
+	start := time.Date(year, month, 1, 0, 0, 0, 0, p.now.Location())
+	end := start.AddDate(0, 1, 0).Add(-time.Second)
 	return &TimeRange{From: start, To: end}
 }
 

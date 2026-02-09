@@ -126,6 +126,8 @@ anker recap today
 anker recap yesterday
 anker recap thisweek
 anker recap lastweek
+anker recap thismonth
+anker recap lastmonth
 anker recap 2025-12-01..2025-12-31
 anker recap "last 7 days"
 anker recap "week 52"
