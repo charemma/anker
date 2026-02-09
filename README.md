@@ -1,6 +1,10 @@
-# anker
+<div align="center">
+  <img src="logo.png" alt="anker logo" width="200"/>
 
-> a fixpoint for your work
+  # anker
+
+  > a fixpoint for your work
+</div>
 
 **anker** is a local CLI tool that helps you remember what you actually did — without time tracking, productivity metrics, or background agents.
 
@@ -168,14 +172,17 @@ anker recap today  # uses /path/to/custom/config instead of ~/.anker
 
 ## Privacy & Data
 
-**anker has no default sources.**
+**anker has no default data sources.**
 
-It does not monitor your system and does not collect data automatically. All sources must be explicitly configured by the user. If a source exists, it is because you asked for it.
+A data source is a location anker reads from to reconstruct your work — like a git repository, a folder of markdown notes, or an Obsidian vault. anker does not monitor your system or collect data automatically.
+
+Every data source must be explicitly added by you with `anker source add`. If a source exists in your configuration, it is because you explicitly asked for it. anker only reads from locations you specify.
 
 **Your data stays local:**
 - No telemetry, no analytics, no cloud sync
 - All storage in plain text files (`~/.anker/`)
 - Human-readable YAML and Markdown
+- No background processes or filesystem watchers
 
 **Data storage:**
 ```
@@ -187,10 +194,23 @@ It does not monitor your system and does not collect data automatically. All sou
 
 ## Supported Sources
 
+**The quality of anker's output depends on your data sources.**
+
+Data sources are the core concept of anker. The more comprehensive and accurate your sources, the better anker can reconstruct your workday. We're at the beginning of this journey and rely on community contributions to expand source coverage.
+
+**Currently supported:**
 - **Git repositories** — commits from tracked repos (filtered by author)
 - **Markdown files** — notes with tag or heading filters
 - **Obsidian vaults** — lists modified/created markdown files by timestamp
-- **More planned** — see [TODO.md](TODO.md) for roadmap
+
+**Planned sources:**
+- Calendar events (Google Calendar, Outlook, iCal)
+- Browser history (filtered by domain)
+- Issue trackers (Jira, Linear, GitHub Issues)
+- Communication (Slack, email summaries)
+- Time tracking tools (Toggl, Harvest)
+
+**Help us improve:** We need your feedback and contributions! If you have ideas for additional sources or improvements to existing ones, please [open an issue](https://github.com/charemma/anker/issues) or contribute via pull request. See [TODO.md](TODO.md) for the full roadmap.
 
 ## Development
 
