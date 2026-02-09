@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/charemma/anker/internal/config"
+	"github.com/charemma/anker/internal/git"
 	"github.com/charemma/anker/internal/sources"
 	"github.com/charemma/anker/internal/storage"
 	"github.com/spf13/cobra"
@@ -63,14 +64,24 @@ Examples:
 
 		switch sourceType {
 		case "git":
-			// Use --author flags if provided, otherwise use config
+			// Use --author flags if provided, otherwise use config, otherwise use git config
 			if len(gitAuthors) > 0 {
 				config.Metadata["author"] = strings.Join(gitAuthors, ",")
 			} else {
-				// Fallback to global config if available
+				// Fallback to anker config if available
 				cfg, err := loadConfig()
 				if err == nil && cfg.AuthorEmail != "" {
 					config.Metadata["author"] = cfg.AuthorEmail
+				} else {
+					// Final fallback: git config --global user.email
+					if email, err := git.GetAuthorEmail(); err == nil && email != "" {
+						config.Metadata["author"] = email
+						fmt.Printf("using git user.email: %s\n", email)
+					} else {
+						fmt.Println("warning: no author email configured - will track ALL commits in this repo")
+						fmt.Println("  set author with: --author your@email.com")
+						fmt.Println("  or configure git: git config --global user.email your@email.com")
+					}
 				}
 			}
 		case "markdown":

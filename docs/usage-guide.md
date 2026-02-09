@@ -10,7 +10,13 @@ Complete guide to using anker's features.
 ```bash
 anker source add git ~/code/my-project
 anker source add git .  # current directory
+
+# Filter by author (default: git config user.email)
+anker source add git . --author you@work.com
+anker source add git . --author foo@work.com --author bar@personal.com
 ```
+
+By default, anker uses your `git config --global user.email` to filter commits. You can override this with `--author` or set `author_email` in `~/.anker/config.yaml`.
 
 **Markdown notes:**
 ```bash

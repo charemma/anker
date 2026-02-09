@@ -71,9 +71,15 @@ anker reads your git config to filter commits by author:
 git config --global user.name
 git config --global user.email
 
-# anker uses user.email to filter commits
-# Override in ~/.anker/config.yaml if needed
+# anker uses user.email to filter commits by default
 ```
+
+**Author email priority:**
+1. `--author` flag when adding a git source
+2. `author_email` in `~/.anker/config.yaml`
+3. `git config --global user.email` (automatic fallback)
+
+If none of these are set, anker will track ALL commits in the repository (with a warning).
 
 ## Privacy
 
