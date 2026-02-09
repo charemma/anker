@@ -4,6 +4,8 @@
 
 **anker** is a local CLI tool that helps you remember what you actually did — without time tracking, productivity metrics, or background agents.
 
+**About this project:** anker is built in collaboration with Claude AI as a demonstration of modern AI-assisted development practices. The goal is to explore how AI can accelerate software development while producing genuinely useful tools.
+
 ## The Problem
 
 Work happens across multiple git repositories, scattered notes, meetings, and unplanned tasks. At the end of the day, the hard part isn't doing the work — it's **explaining and remembering what actually happened**.

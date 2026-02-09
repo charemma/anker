@@ -13,19 +13,25 @@ For quick local development, use `just build` and `go test`. For CI-like checks,
 
 ## Quick Reference
 
-**Local development (fast):**
+**Local development (fast, native Go):**
 ```bash
-go build -o bin/anker .      # Native build
-go test ./...                 # Native tests
-just build                    # Same as above
+go build -o bin/anker .      # Direct Go build
+go test ./...                 # Direct Go tests
+just build                    # Same as 'go build -o bin/anker .'
+```
+
+**Cross-platform builds (via Dagger):**
+```bash
+just build-osx               # macOS ARM64 binary
+just build-linux             # Linux AMD64 binary
 ```
 
 **CI checks (containerized, reproducible):**
 ```bash
-just check                    # Full CI pipeline (test + lint + build)
-just test                     # Tests only (via Dagger)
-just lint                     # Linter only (via Dagger)
-just coverage                 # Coverage report (via Dagger)
+just check                   # Full CI pipeline (test + lint + build via Dagger)
+just test                    # Tests in container (via Dagger)
+just lint                    # golangci-lint in container (via Dagger)
+just coverage                # Coverage report (via Dagger)
 ```
 
 ## Dagger Setup
