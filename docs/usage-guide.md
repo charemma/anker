@@ -123,17 +123,20 @@ Claude can see the actual code changes and generate more accurate summaries, rel
 ### Claude CLI
 
 ```bash
-# Generate standup notes
+# Generate standup notes with code context
 anker recap yesterday --format markdown | claude -p "Create concise standup notes"
 
-# Weekly report
+# Weekly report with actual changes
 anker recap thisweek --format markdown | claude -p "Write a professional weekly status report"
 
-# Release notes
-anker recap "last 2 weeks" --format markdown | claude -p "Create release notes from these commits"
+# Code review summary
+anker recap today --format markdown | claude -p "Review these changes and suggest improvements"
 
 # Full pipeline: analyze → summarize → render
 anker recap thisweek --format markdown | claude -p "Summarize my week" | glow -p
+
+# Ask technical questions about your work
+anker recap thisweek --format markdown | claude -p "Are there any potential bugs or security issues in these changes?"
 ```
 
 ### Pretty Terminal Output
