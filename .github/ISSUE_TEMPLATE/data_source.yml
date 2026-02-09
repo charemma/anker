@@ -1,0 +1,76 @@
+name: New Data Source
+description: Propose a new data source for anker to support
+title: "[Source]: "
+labels: ["data-source", "enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing a new data source! Data sources are the core of anker.
+
+  - type: input
+    id: source-name
+    attributes:
+      label: Source Name
+      description: What would you call this source?
+      placeholder: e.g., "Google Calendar", "Jira", "Slack"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What data would this source provide?
+      description: Describe what kind of work information this source contains
+      placeholder: |
+        Example: Google Calendar would provide meeting events with:
+        - Meeting title
+        - Attendees
+        - Time range
+        - Location/video link
+    validations:
+      required: true
+
+  - type: textarea
+    id: access
+    attributes:
+      label: How would anker access this data?
+      description: APIs, file formats, export mechanisms, etc.
+      placeholder: |
+        Example: Google Calendar API, OAuth authentication needed
+        or: iCal file export (.ics format)
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Why is this valuable?
+      description: How would this improve anker's ability to reconstruct your workday?
+      placeholder: Explain the use case and benefit
+    validations:
+      required: true
+
+  - type: dropdown
+    id: privacy
+    attributes:
+      label: Privacy Considerations
+      description: Does this source handle sensitive data?
+      options:
+        - No sensitive data
+        - Contains personal info (names, emails)
+        - Contains confidential work data
+        - Requires authentication/credentials
+    validations:
+      required: true
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Example Data
+      description: Show example output this source would provide
+      placeholder: |
+        Example entry:
+        2026-01-29 14:00-15:00 Sprint Planning (10 attendees)
+    validations:
+      required: false

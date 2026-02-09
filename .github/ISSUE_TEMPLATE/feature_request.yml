@@ -1,0 +1,50 @@
+name: Feature Request
+description: Suggest a new feature or data source for anker
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to suggest a feature!
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Feature Type
+      description: What kind of feature are you suggesting?
+      options:
+        - New data source
+        - Improvement to existing source
+        - New output format
+        - CLI enhancement
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the feature you'd like to see
+      placeholder: What should this feature do?
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: Why would this be useful? What problem does it solve?
+      placeholder: Describe your workflow or problem
+    validations:
+      required: true
+
+  - type: textarea
+    id: implementation
+    attributes:
+      label: Implementation Ideas
+      description: Do you have ideas about how this could be implemented?
+      placeholder: Optional - technical details, APIs, tools, etc.
+    validations:
+      required: false
