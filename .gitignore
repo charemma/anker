@@ -7,3 +7,6 @@ coverage.html
 # Dagger
 .dagger/
 .DS_Store
+
+# Demo
+resources/demo.gif

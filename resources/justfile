@@ -1,0 +1,49 @@
+# Demo GIF generation for anker
+
+_default:
+    @just --list
+
+# Install demo dependencies (vhs and glow)
+install:
+    @echo "Installing demo tools..."
+    @if ! command -v vhs >/dev/null 2>&1; then \
+        echo "Installing vhs..."; \
+        brew install vhs; \
+    else \
+        echo "✓ vhs already installed"; \
+    fi
+    @if ! command -v glow >/dev/null 2>&1; then \
+        echo "Installing glow..."; \
+        brew install glow; \
+    else \
+        echo "✓ glow already installed"; \
+    fi
+    @echo ""
+    @echo "✓ Ready! Run 'just setup' to create test data."
+
+# Setup demo environment (creates test data)
+setup:
+    @echo "Setting up demo environment..."
+    @chmod +x demo-setup.sh
+    @./demo-setup.sh
+
+# Create demo GIF
+gif:
+    @if ! command -v vhs >/dev/null 2>&1; then \
+        echo "❌ vhs not found. Run 'just install' first."; \
+        exit 1; \
+    fi
+    @if ! command -v glow >/dev/null 2>&1; then \
+        echo "❌ glow not found. Run 'just install' first."; \
+        exit 1; \
+    fi
+    @echo "Creating demo.gif..."
+    @echo "(This will take ~60 seconds)"
+    @cd .. && ANKER_HOME=/tmp/anker-demo/.anker vhs resources/demo.tape
+    @echo "✓ demo.gif created at resources/demo.gif"
+
+# Full workflow: setup + generate GIF
+update: setup gif
+    @echo ""
+    @echo "✓ Demo GIF updated!"
+    @echo "  Location: resources/demo.gif"

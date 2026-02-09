@@ -39,6 +39,12 @@ This aligns with the belief that:
 - **Local & transparent** — all data stays on your machine
 - **Text-first** — human-readable storage
 
+## Demo
+
+<div align="center">
+  <img src="resources/demo.gif" alt="anker demo" width="100%"/>
+</div>
+
 ## Quick Start
 
 ### Installation
