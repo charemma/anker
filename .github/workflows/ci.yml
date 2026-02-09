@@ -7,15 +7,41 @@ on:
     branches: [main]
 
 jobs:
-  check:
-    name: Check (Test + Lint + Build)
+  test:
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run Dagger check
+      - name: Run tests via Dagger
         uses: dagger/dagger-for-github@v6
         with:
           version: latest
           verb: call
-          args: check --source=.
+          args: test --source=.
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run linter via Dagger
+        uses: dagger/dagger-for-github@v6
+        with:
+          version: latest
+          verb: call
+          args: lint --source=.
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build via Dagger
+        uses: dagger/dagger-for-github@v6
+        with:
+          version: latest
+          verb: call
+          args: build --source=. --goos=linux --goarch=amd64 export --path=./bin/anker
