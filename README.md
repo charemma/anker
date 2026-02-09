@@ -16,6 +16,22 @@ Work happens across multiple git repositories, scattered notes, meetings, and un
 
 **anker accepts the chaos.** You cannot plan everything in advance — production incidents happen, requirements change, bugs emerge. anker helps you reconstruct your workday after the fact, without judgment or optimization.
 
+## Philosophy
+
+Most productivity tools focus on *measuring* time, activities, or output. They ask you to track every minute, optimize every task, and chase efficiency metrics.
+
+**anker takes a different approach.**
+
+Instead of chasing classic productivity metrics, anker embraces what we call an **#AntiProductivity mindset** — focusing on understanding *what you actually did* rather than how many minutes you logged or how much you planned/optimized.
+
+The goal is not to make you faster, but to help you reflect on your work in a human-centric, meaningful way. anker reconstructs your day from the sources of truth you already have (like Git), and turns your work into readable, narrative summaries.
+
+This aligns with the belief that:
+- Productivity is not about *more*.
+- It's about *clarity*, *context* and *value*.
+
+[Read more about the AntiProductivity mindset →](docs/anti-productivity.md)
+
 ### Core Principles
 
 - **Deferred analysis** — work first, summarize later
