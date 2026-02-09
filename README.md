@@ -66,13 +66,20 @@ anker recap yesterday --format simple
 
 ### Integration with AI
 
+**Markdown format includes full git diffs** - perfect for AI to understand actual code changes:
+
 ```bash
-# Generate standup notes
+# Generate standup notes with code context
 anker recap yesterday --format markdown | claude -p "Create standup notes"
 
 # Full pipeline: analyze → summarize → render
 anker recap thisweek --format markdown | claude -p "Summarize my week" | glow -p
+
+# Generate detailed release notes from actual diffs
+anker recap "last 2 weeks" --format markdown | claude -p "Create release notes"
 ```
+
+See [Usage Guide](docs/usage-guide.md#output-formats) for more examples and format details.
 
 ## Supported Data Sources
 

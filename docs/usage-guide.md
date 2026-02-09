@@ -86,11 +86,37 @@ anker recap today --format json
 ```
 Structured data for further processing.
 
-**Markdown:**
+**Markdown (with git diffs):**
 ```bash
 anker recap today --format markdown
 ```
-Full context with git diffs, perfect for AI processing or documentation.
+
+This format includes **full git diffs** for each commit, making it ideal for:
+- **AI processing** - Claude/GPT can understand the actual changes
+- **Documentation** - Full context for release notes, reports
+- **Code review** - See what actually changed
+
+**Example output:**
+```markdown
+# Work Report: 2026-02-09
+
+## Git: /Users/you/code/anker (2 commits)
+
+### 2026-02-09 14:23 - Fix authentication bug
+**Author:** you@example.com
+**Hash:** a1b2c3d
+
+```diff
+diff --git a/auth/login.go b/auth/login.go
+@@ -15,7 +15,7 @@ func Login(username, password string) error {
+-    if user == nil {
++    if user == nil || !user.Active {
+         return errors.New("invalid credentials")
+```
+```
+
+**Why this is powerful for AI:**
+Claude can see the actual code changes and generate more accurate summaries, release notes, or code reviews.
 
 ## Integration Examples
 
