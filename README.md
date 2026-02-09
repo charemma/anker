@@ -75,7 +75,7 @@ anker recap yesterday --format markdown | claude -p "Create standup notes"
 # Full pipeline: analyze → summarize → render
 anker recap thisweek --format markdown | claude -p "Summarize my week" | glow -p
 
-# Code review summary from actual diffs
+# Code review with full diffs (markdown format includes all code changes)
 anker recap today --format markdown | claude -p "Review these changes and suggest improvements"
 ```
 

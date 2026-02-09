@@ -97,22 +97,20 @@ This format includes **full git diffs** for each commit, making it ideal for:
 - **Code review** - See what actually changed
 
 **Example output:**
-```markdown
+```
 # Work Report: 2026-02-09
 
 ## Git: /Users/you/code/anker (2 commits)
 
 ### 2026-02-09 14:23 - Fix authentication bug
-**Author:** you@example.com
-**Hash:** a1b2c3d
+Author: you@example.com
+Hash: a1b2c3d
 
-```diff
 diff --git a/auth/login.go b/auth/login.go
 @@ -15,7 +15,7 @@ func Login(username, password string) error {
 -    if user == nil {
 +    if user == nil || !user.Active {
          return errors.New("invalid credentials")
-```
 ```
 
 **Why this is powerful for AI:**
@@ -129,7 +127,7 @@ anker recap yesterday --format markdown | claude -p "Create concise standup note
 # Weekly report with actual changes
 anker recap thisweek --format markdown | claude -p "Write a professional weekly status report"
 
-# Code review summary
+# Code review (requires markdown format for diffs)
 anker recap today --format markdown | claude -p "Review these changes and suggest improvements"
 
 # Full pipeline: analyze → summarize → render
