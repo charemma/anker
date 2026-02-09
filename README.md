@@ -41,12 +41,30 @@ It exists to help you retain orientation after the fact — to explain your work
 
 ### Installation
 
+**Quick install (macOS/Linux):**
+```bash
+curl -sSL https://charemma.de/anker/install.sh | sh
+```
+
+**Download binary manually:**
+
+Visit [GitHub Releases](https://github.com/charemma/anker/releases) and download the binary for your platform, then:
+
+```bash
+# macOS/Linux
+tar -xzf anker_*.tar.gz
+sudo mv anker /usr/local/bin/
+
+# Verify installation
+anker --version
+```
+
+**Using Go:**
 ```bash
 go install github.com/charemma/anker@latest
 ```
 
-Or build from source:
-
+**Build from source:**
 ```bash
 git clone https://github.com/charemma/anker
 cd anker
