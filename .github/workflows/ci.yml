@@ -33,15 +33,28 @@ jobs:
           verb: call
           args: lint --source=.
 
-  build:
-    name: Build
+  build-linux:
+    name: Build (Linux)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build via Dagger
+      - name: Build Linux binary via Dagger
         uses: dagger/dagger-for-github@v6
         with:
           version: latest
           verb: call
           args: build --source=. --goos=linux --goarch=amd64 export --path=./bin/anker
+
+  build-osx:
+    name: Build (macOS)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build macOS binary via Dagger
+        uses: dagger/dagger-for-github@v6
+        with:
+          version: latest
+          verb: call
+          args: build --source=. --goos=darwin --goarch=arm64 export --path=./bin/anker
