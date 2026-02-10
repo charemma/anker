@@ -13,12 +13,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run tests via Dagger
-        uses: dagger/dagger-for-github@v6
-        with:
-          version: latest
-          verb: call
-          args: test --source=.
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Run tests
+        run: just test
 
   lint:
     name: Lint
@@ -26,12 +25,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run linter via Dagger
-        uses: dagger/dagger-for-github@v6
-        with:
-          version: latest
-          verb: call
-          args: lint --source=.
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Run linter
+        run: just lint
 
   build-linux:
     name: Build (Linux)
@@ -39,12 +37,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Linux binary via Dagger
-        uses: dagger/dagger-for-github@v6
-        with:
-          version: latest
-          verb: call
-          args: build --source=. --goos=linux --goarch=amd64 export --path=./bin/anker
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Build Linux binary
+        run: just build-linux
 
   build-osx:
     name: Build (macOS)
@@ -52,9 +49,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build macOS binary via Dagger
-        uses: dagger/dagger-for-github@v6
-        with:
-          version: latest
-          verb: call
-          args: build --source=. --goos=darwin --goarch=arm64 export --path=./bin/anker
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Build macOS binary
+        run: just build-osx
