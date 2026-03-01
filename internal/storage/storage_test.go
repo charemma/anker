@@ -9,8 +9,7 @@ import (
 
 func TestNewStore(t *testing.T) {
 	tmpDir := t.TempDir()
-	os.Setenv("ANKER_HOME", tmpDir)
-	defer os.Unsetenv("ANKER_HOME")
+	t.Setenv("ANKER_HOME", tmpDir)
 
 	store, err := NewStore()
 	if err != nil {

@@ -53,11 +53,11 @@ func TestObsidianSource_GetEntries(t *testing.T) {
 
 	// Create test files with different timestamps
 	files := map[string]time.Time{
-		"note1.md":                   now,
-		"note2.md":                   yesterday,
-		"Daily Notes/2025-01-29.md":  now,
-		".obsidian/workspace.json":   now, // should be skipped
-		"old-note.md":                lastWeek,
+		"note1.md":                  now,
+		"note2.md":                  yesterday,
+		"Daily Notes/2025-01-29.md": now,
+		".obsidian/workspace.json":  now, // should be skipped
+		"old-note.md":               lastWeek,
 	}
 
 	for name, modTime := range files {

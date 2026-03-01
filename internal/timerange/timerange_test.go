@@ -366,12 +366,12 @@ func TestParser_ParseMonthYear_Invalid(t *testing.T) {
 
 	invalid := []string{
 		"invalidmonth 2025",
-		"oct",              // missing year
-		"2025",             // missing month
-		"october 25",       // year too short
-		"13 2025",          // numeric month not supported here
-		"oct-2025",         // wrong separator
-		"october/2025",     // wrong separator
+		"oct",          // missing year
+		"2025",         // missing month
+		"october 25",   // year too short
+		"13 2025",      // numeric month not supported here
+		"oct-2025",     // wrong separator
+		"october/2025", // wrong separator
 	}
 
 	for _, spec := range invalid {

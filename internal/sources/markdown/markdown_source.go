@@ -96,7 +96,7 @@ func (m *MarkdownSource) extractEntries(path string, timestamp time.Time) ([]sou
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	var entries []sources.Entry
 	var currentHeading string

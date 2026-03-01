@@ -2,167 +2,84 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**anker** is a Go-based CLI tool for reconstructing your workday after the fact.
-
-## Project goals
-
-- Build a calm, explicit, text-first CLI
-- No background tracking or time measurement
-- Focus on reconstructing work *after the fact*
-- Prioritize clarity, predictability, and good UX
+**anker** is a Go CLI tool for reconstructing your workday after the fact. No time tracking, no background agents -- just explicit, local, text-first summaries built from data sources you already have.
 
 ## Design principles
 
-- Local-first: all data stays on your machine
-- Explicit commands over implicit behavior
-- CLI arguments override configuration
-- No automatic scanning of the filesystem
-- No plugins or extension systems (yet)
+- Local-first: all data stays on your machine, no network dependencies
+- Explicit over implicit: nothing is tracked automatically, every source is added by the user
 - Deferred analysis: work first, summarize later
-
-## Initial scope
-
-Focus on implementing:
-
-1. `anker source`
-   - Add/list/remove data sources (git, markdown, obsidian, etc.)
-   - Extensible source system for multiple data types
-   - Positional arguments: `anker source add git .`
-
-2. `anker recap`
-   - Analyze all tracked sources for a time period
-   - Flexible time specs (today, thisweek, date ranges)
-   - Generate human-readable summary
-
-3. `anker note`
-   - Store one-off work notes
-   - (not yet implemented)
-
-## Technical constraints
-
-- Language: Go
-- CLI parsing: Cobra (allows easy addition of subcommands)
-- Storage: YAML / Markdown (human-readable)
-- Build automation: Just (wrapper) + Dagger (build logic)
-- No database, no network dependencies
+- CLI arguments override configuration
+- Simple and predictable -- prefer straightforward solutions over clever abstractions
+- Not a time tracker, not a productivity optimizer, not a daemon
 
 ## Development commands
 
+Enter the dev shell (provides go, gopls, golangci-lint):
+- `nix develop` or use direnv (`.envrc` with `use flake`)
+
 Build and run:
-- `just build` - build binary to bin/anker
-- `just build-to <path>` - build binary to custom location
-- `go run . source list` - quick run without building
+- `nix build` -- reproducible build to `./result/bin/anker`
+- `go build -o bin/anker .` -- quick build during development
+- `go run . recap today` -- quick run without building
 
-Testing:
-- `just test` - run all tests
-- `just coverage` - run tests with coverage report
-- `go test ./internal/...` - test specific package
-
-Code quality:
-- `just lint` - run linter
-- `just check` - run all checks (test + lint + build)
-- `just clean` - remove build artifacts
+Testing and checks:
+- `nix flake check` -- all checks (tests + lint + build + pre-commit)
+- `go test ./...` -- quick tests during development
+- `go test ./internal/timerange/...` -- test a specific package
+- `go test -run TestParseToday ./internal/timerange/` -- run a single test
 
 ## Code architecture
 
 ```
-main.go                  - entry point, calls cmd.Execute()
-cmd/
-  root.go                - Cobra root command setup
-  source.go              - manage data sources (add/list/remove)
-  recap.go              - generate work summaries
+main.go              -- entry point, calls cmd.Execute()
+flake.nix            -- Nix flake (package, checks, devShell)
+cmd/                  -- Cobra commands, each file registers via init()
+  root.go             -- root command + version info (ldflags: Version, Commit, Date)
+  source.go           -- source add/list/remove subcommands
+  recap.go            -- recap command with output formatting (simple/detailed/json/markdown)
 internal/
   sources/
-    source.go            - Source interface + Entry/Config types
-    git/
-      git_source.go      - GitSource implementation (uses git log)
-    markdown/
-      markdown_source.go - MarkdownSource implementation (parses .md files)
-    obsidian/
-      obsidian_source.go - ObsidianSource implementation (tracks vault file changes)
-  git/
-    git.go               - FindRepoRoot() walks up dirs to find .git
-  storage/
-    storage.go           - Store manages ~/.anker/sources.yaml
+    source.go          -- Source interface (Type, Location, Validate, GetEntries) + Entry/Config types
+    git/               -- GitSource: commits via git log, diff enrichment for markdown format
+    markdown/          -- MarkdownSource: extracts tagged lines/sections from .md files
+    obsidian/          -- ObsidianSource: tracks vault file changes by timestamp
+  config/              -- User config from ~/.anker/config.yaml (week_start, author_email)
+  storage/             -- Store manages ~/.anker/sources.yaml (add/list/remove sources)
+  timerange/           -- Flexible time spec parser (today, thisweek, "october 2025", date ranges)
+    locales/           -- Multilingual month name support (en, de); add new locales here
+  git/                 -- Git helpers: FindRepoRoot, GetAuthorEmail from git config
+  paths/               -- GetAnkerHome() resolves ANKER_HOME env var or defaults to ~/.anker
 ```
 
 Key patterns:
-- Commands are separate files in cmd/ and register themselves via init()
-- Source interface allows multiple data source types (git, markdown, calendar, etc.)
-- Each source type implements: Type(), Location(), Validate(), GetEntries()
-- internal/storage handles all file I/O for ~/.anker/
-- Source providers are independent and can be added without changing core code
+- Source interface allows adding new data source types without changing core code. Implement in `internal/sources/<type>/`, wire up in `cmd/source.go`.
+- `cmd/recap.go` collects entries from all sources, sorts by timestamp, and formats output. The markdown format enriches git entries with full diffs.
+- `internal/timerange` parses human-friendly time specs into `TimeRange{From, To}`. Locale-aware month names are registered in `locales/`.
+- Config resolution chain: CLI flags > `~/.anker/config.yaml` > git config fallback (for author_email).
 
-## Storage structure
+## Storage
 
-```
-~/.anker/
-  sources.yaml           - tracked data sources (git repos, markdown dirs, etc.)
-  entries/               - (planned) work notes
-  2026/01/               - (planned) generated daily summaries
-```
+All state lives in `~/.anker/` (overridable via `ANKER_HOME` env var):
+- `config.yaml` -- user configuration (week_start, author_email)
+- `sources.yaml` -- registered data sources with type, path, metadata
 
-sources.yaml format:
-```yaml
-sources:
-  - type: git
-    path: /path/to/repo
-    added: 2026-01-27T12:14:01+02:00
-  - type: markdown
-    path: /path/to/notes
-    added: 2026-01-27T15:00:00+02:00
-    metadata:
-      tags: work,done
-      headings: "## Work,## Done"
-  - type: obsidian
-    path: /Users/you/Obsidian/Second Brain
-    added: 2026-01-29T10:00:00+02:00
-```
+Tests use `ANKER_HOME` pointed at `t.TempDir()` to isolate filesystem state.
 
-## Source system design
+## Build system
 
-The source system is extensible and allows tracking work from multiple locations.
+Nix flake for reproducible builds, checks, and dev environment. All tools are pinned via `flake.lock`.
 
-**Implemented sources:**
-- `git` - Git repositories (tracks commits via git log)
-- `markdown` - Markdown files (extracts tagged lines/sections)
-- `obsidian` - Obsidian vaults (lists modified/created files by timestamp)
+The flake provides: package build via `buildGoModule`, checks (tests, lint, build, pre-commit hooks), and a devShell with all required tools. CI runs `nix flake check`.
 
-**Potential future sources:**
-The architecture supports any data source that can provide timestamped entries. Examples: calendar events, issue trackers, activity feeds.
+## Key design decisions
 
-**Adding a new source:**
-1. Implement the Source interface in `internal/sources/<type>/`
-2. Add handling in `cmd/source.go` add command
-3. No changes to core storage or command structure needed
+Documented in `docs/decisions/` as numbered ADRs. Read these before making architectural changes.
 
-## What to avoid
-
-- Time tracking semantics
-- Session-based state
-- Background agents
-- Overengineering
-
-## Tone
-
-- Calm
-- Precise
-- Minimalist
-- Senior-engineer friendly
-
-Always prefer simple, explicit solutions over clever abstractions.
-
-## Architecture Decisions
-
-**Location:** `docs/decisions/`
-
-Key design decisions are documented here with:
-- Problem context
-- Options considered (Good/Bad lists)
-- Final decision and rationale
-
-**Format:** See [docs/decisions/TEMPLATE.md](docs/decisions/TEMPLATE.md)
-
-**When to add:** Significant architectural or UX decisions that affect future development.
-
-**Read the decisions** to understand design philosophy and past reasoning. They explain the "why" behind implementation choices.
+Most relevant decisions:
+- Sources require explicit registration (`anker source add git .`), no auto-discovery (ADR 0001)
+- Source type is a positional argument, not a flag or auto-detected (ADR 0002)
+- Future community extensions via executable plugins `anker-source-<type>` with JSON protocol (ADR 0003)
+- Git-style aliases planned for user-defined shortcuts (ADR 0004)
+- Report templating via Lua planned but not yet implemented; current output formats (simple/detailed/json/markdown) are hardcoded in Go (ADR 0009)
+- Nix flake build system, replacing earlier Just + Dagger setup (ADR 0013, supersedes ADR 0012)

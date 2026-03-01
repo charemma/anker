@@ -1,165 +1,101 @@
 # Building and Testing
 
-This guide covers the build system, testing workflows, and CI/CD setup for anker.
+This guide covers the build system, development workflow, and CI/CD setup for anker.
 
 ## Overview
 
-anker uses:
-- **Go** for compilation and native testing
-- **Just** as command runner (thin wrapper)
-- **Dagger** for reproducible, containerized builds
+anker uses a **Nix flake** for reproducible builds, tests, and linting. All tools and dependencies are pinned via `flake.lock` -- no manual installation needed.
 
-For quick local development, use `just build` and `go test`. For CI-like checks, use `just check` (runs via Dagger).
+## Prerequisites
+
+- [Nix](https://nixos.org/) with flakes enabled
+- Optional: [direnv](https://direnv.net/) for automatic shell activation
 
 ## Quick Reference
 
-**Local development (fast, native Go):**
 ```bash
-go build -o bin/anker .      # Direct Go build
-go test ./...                 # Direct Go tests
-just build                    # Same as 'go build -o bin/anker .'
+# Build the binary
+nix build                    # -> ./result/bin/anker
+
+# Run all checks (tests + lint + build + pre-commit)
+nix flake check
+
+# Enter development shell (go, gopls, golangci-lint)
+nix develop
+
+# Format Nix files
+nix fmt
 ```
 
-**Cross-platform builds (via Dagger):**
-```bash
-just build-osx               # macOS ARM64 binary
-just build-linux             # Linux AMD64 binary
-```
+## Development Shell
 
-**CI checks (containerized, reproducible):**
-```bash
-just check                   # Full CI pipeline (test + lint + build via Dagger)
-just test                    # Tests in container (via Dagger)
-just lint                    # golangci-lint in container (via Dagger)
-just coverage                # Coverage report (via Dagger)
-```
-
-## Dagger Setup
-
-**Installation:**
-```bash
-# macOS/Linux
-curl -L https://dl.dagger.io/dagger/install.sh | sh
-
-# Or via Homebrew (macOS)
-brew install dagger/tap/dagger
-
-# Verify
-dagger version
-```
-
-## Direct Dagger Usage
-
-For daily development, prefer `just` commands. Use direct Dagger calls for debugging or CI setup:
-
-### List available functions
-```bash
-dagger functions
-
-# Or with more details
-dagger call --help
-```
-
-### Run all checks (test + lint + build)
-```bash
-# Default action
-dagger call default --source=.
-
-# Or explicitly
-dagger call check --source=.
-```
-
-### Individual commands
-
-**Run tests:**
-```bash
-dagger call test --source=.
-```
-
-**Run linter:**
-```bash
-dagger call lint --source=.
-```
-
-**Build binary (exports to ./bin/anker):**
-```bash
-dagger call build --source=.
-
-# Custom output path
-dagger call build --source=. --output=./anker
-```
-
-**Run tests with coverage:**
-```bash
-dagger call coverage --source=.
-```
-
-## What Dagger Does
-
-**Reproducibility:**
-- Runs in Docker containers (same environment everywhere)
-- Local development = CI (no "works on my machine")
-- Versioned container images (golang:1.21, golangci-lint:v1.55)
-
-**Speed:**
-- Caching (rebuilds only what changed)
-- Parallel execution where possible
-
-**Simplicity:**
-- One tool for local and CI
-- No shell scripts, no YAML
-- Go code you can debug
-
-## Development Workflow
+The flake provides a dev shell with all required tools:
 
 ```bash
-# Quick iteration during development
-go test ./...               # Fast, native
-go build -o bin/anker .     # Fast, native
+# Enter manually
+nix develop
 
-# Before merging to main
-dagger call check --source=.  # Full CI checks (Docker)
+# Or use direnv (activates automatically when entering the directory)
+direnv allow
 ```
 
-## CI/CD (GitHub Actions)
+The dev shell includes:
+- `go` (compiler + tools)
+- `gopls` (language server)
+- `golangci-lint` (linter)
+- Pre-commit hooks (gofmt, typos, alejandra)
 
-```yaml
-# .github/workflows/ci.yml
-- uses: dagger/dagger-for-github@v5
-- run: dagger call check --source=.
-```
+## Building
 
-## Why Dagger?
-
-**vs Taskfile/Make:**
-- Reproducible (Docker containers)
-- Not shell-dependent (works everywhere)
-- Cacheable, faster CI
-
-**vs Docker commands:**
-- No complex docker run commands
-- Composable functions
-- Better caching
-
-**vs Custom CI:**
-- Local = CI (test locally before push)
-- Portable across CI providers
-- Version controlled (Go code)
-
-## Troubleshooting
-
-**Dagger not found:**
 ```bash
-# Add to PATH (after install)
-export PATH="$HOME/.local/bin:$PATH"
+# Reproducible build via Nix (output in ./result/bin/anker)
+nix build
+
+# Quick build during development (from dev shell)
+go build -o bin/anker .
+
+# Quick run without building
+go run . recap today
 ```
 
-**Docker errors:**
+## Testing
+
 ```bash
-# Dagger requires Docker
-docker --version  # Should work
+# Run tests via Nix (sandboxed, reproducible)
+nix build .#checks.x86_64-linux.tests
+
+# Quick tests during development (from dev shell)
+go test ./...
+go test ./internal/timerange/...
+go test -run TestParseToday ./internal/timerange/
 ```
 
-**Slow first run:**
-- Dagger downloads container images on first run
-- Subsequent runs are cached and fast
+## Checks
+
+`nix flake check` runs all of these:
+
+| Check | What it does |
+|---|---|
+| `checks.build` | Builds the binary via `buildGoModule` |
+| `checks.tests` | Runs `go test ./...` in sandbox |
+| `checks.lint` | Runs `golangci-lint` in sandbox |
+| `checks.pre-commit` | gofmt, typos, alejandra |
+
+Run a single check:
+```bash
+nix build .#checks.x86_64-linux.lint
+```
+
+## CI/CD
+
+GitHub Actions runs `nix flake check` on every push and PR. See `.github/workflows/ci.yml`.
+
+Releases use GoReleaser via `.github/workflows/release.yml` (independent of the Nix build system).
+
+## Cross-Compilation
+
+From the dev shell:
+```bash
+GOOS=darwin GOARCH=arm64 go build -o bin/anker .   # macOS ARM64
+GOOS=linux GOARCH=amd64 go build -o bin/anker .    # Linux AMD64
+```

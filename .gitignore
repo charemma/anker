@@ -4,9 +4,12 @@ coverage.html
 *.test
 *.prof
 
-# Dagger
-.dagger/
+# Nix
+.direnv/
+result
+
 .DS_Store
 
 # Demo
 resources/demo.gif
+.pre-commit-config.yaml

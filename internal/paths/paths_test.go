@@ -9,8 +9,7 @@ import (
 func TestGetAnkerHome(t *testing.T) {
 	t.Run("uses ANKER_HOME env var when set", func(t *testing.T) {
 		customPath := "/custom/anker/path"
-		os.Setenv("ANKER_HOME", customPath)
-		defer os.Unsetenv("ANKER_HOME")
+		t.Setenv("ANKER_HOME", customPath)
 
 		home, err := GetAnkerHome()
 		if err != nil {
@@ -23,7 +22,7 @@ func TestGetAnkerHome(t *testing.T) {
 	})
 
 	t.Run("falls back to ~/.anker when ANKER_HOME not set", func(t *testing.T) {
-		os.Unsetenv("ANKER_HOME")
+		t.Setenv("ANKER_HOME", "")
 
 		home, err := GetAnkerHome()
 		if err != nil {

@@ -1,7 +1,7 @@
 # 0012: Build System Architecture
 
 **Date:** 2026-01-29
-**Status:** Implemented
+**Status:** Superseded by 0013
 **Participants:** Charalambos Emmanouilidis, Claude.ai
 
 ## Problem

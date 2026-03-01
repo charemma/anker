@@ -122,8 +122,8 @@ Examples:
 				}
 
 				source = markdown.NewMarkdownSource(cfg.Path, tags, headings)
-		case "obsidian":
-			source = obsidian.NewObsidianSource(cfg.Path)
+			case "obsidian":
+				source = obsidian.NewObsidianSource(cfg.Path)
 			default:
 				fmt.Printf("Warning: unsupported source type '%s' at %s\n", cfg.Type, cfg.Path)
 				continue
@@ -310,8 +310,8 @@ func printJSONRecap(allEntries []sources.Entry, tr *timerange.TimeRange, timespe
 			From string `json:"from"`
 			To   string `json:"to"`
 		} `json:"period"`
-		Total      int              `json:"total"`
-		Activities []sources.Entry  `json:"activities"`
+		Total      int             `json:"total"`
+		Activities []sources.Entry `json:"activities"`
 	}
 
 	report := JSONReport{

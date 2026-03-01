@@ -121,7 +121,7 @@ Calendar events, browser history, issue trackers (Jira, Linear, GitHub Issues), 
 
 - **[Usage Guide](docs/usage-guide.md)** - Complete command reference, examples, integrations
 - **[Configuration](docs/configuration.md)** - Config options, environment variables
-- **[Building & Testing](docs/building-and-testing.md)** - Build system, Dagger, CI/CD
+- **[Building & Testing](docs/building-and-testing.md)** - Nix flake build system, CI/CD
 - **[Architecture Decisions](docs/decisions/)** - Design rationale and ADRs
 - **[Roadmap](TODO.md)** - Planned features and improvements
 
