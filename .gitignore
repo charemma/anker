@@ -6,6 +6,7 @@ coverage.html
 
 # Nix
 .direnv/
+.envrc
 result
 
 .DS_Store
