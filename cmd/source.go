@@ -7,6 +7,7 @@ import (
 	"github.com/charemma/anker/internal/config"
 	"github.com/charemma/anker/internal/git"
 	"github.com/charemma/anker/internal/sources"
+	claudesource "github.com/charemma/anker/internal/sources/claude"
 	"github.com/charemma/anker/internal/storage"
 	"github.com/spf13/cobra"
 )
@@ -37,6 +38,7 @@ Supported types:
   git      - Track git repository commits
   markdown - Track markdown files (notes, journals, etc.)
   obsidian - Track Obsidian vault file changes
+  claude   - Track Claude Code session interactions
 
 Examples:
   anker source add git .
@@ -45,11 +47,21 @@ Examples:
   anker source add git . --author foo@work.com --author bar@personal.com
   anker source add markdown ~/Obsidian/Daily
   anker source add markdown ~/notes --tags work,done
-  anker source add obsidian ~/Documents/Obsidian`,
-	Args: cobra.ExactArgs(2),
+  anker source add obsidian ~/Documents/Obsidian
+  anker source add claude`,
+	Args: cobra.RangeArgs(1, 2),
+	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		if len(args) == 0 {
+			return []string{"git", "markdown", "obsidian", "claude"}, cobra.ShellCompDirectiveNoFileComp
+		}
+		return nil, cobra.ShellCompDirectiveFilterDirs
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		sourceType := args[0]
-		path := args[1]
+		path := ""
+		if len(args) > 1 {
+			path = args[1]
+		}
 
 		store, err := storage.NewStore()
 		if err != nil {
@@ -60,6 +72,10 @@ Examples:
 			Type:     sourceType,
 			Path:     path,
 			Metadata: make(map[string]string),
+		}
+
+		if path == "" && sourceType != "claude" {
+			return fmt.Errorf("path is required for source type: %s", sourceType)
 		}
 
 		switch sourceType {
@@ -93,8 +109,13 @@ Examples:
 			}
 		case "obsidian":
 			// Obsidian source has no additional metadata for now
+		case "claude":
+			if path == "" {
+				path = claudesource.DefaultClaudeHome()
+			}
+			config.Path = path
 		default:
-			return fmt.Errorf("unsupported source type: %s (supported: git, markdown, obsidian)", sourceType)
+			return fmt.Errorf("unsupported source type: %s (supported: git, markdown, obsidian, claude)", sourceType)
 		}
 
 		if err := store.AddSource(config); err != nil {
