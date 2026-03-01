@@ -1,14 +1,18 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"sort"
 	"strings"
 
+	"github.com/charemma/anker/internal/ai"
 	"github.com/charemma/anker/internal/config"
 	"github.com/charemma/anker/internal/sources"
+	"github.com/charemma/anker/internal/sources/claude"
 	"github.com/charemma/anker/internal/sources/git"
 	"github.com/charemma/anker/internal/sources/markdown"
 	"github.com/charemma/anker/internal/sources/obsidian"
@@ -17,8 +21,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const defaultAIPrompt = `Summarize my workday based on the activity log below.
+Start with the period as a heading (e.g. "# Recap: 2026-02-23 to 2026-03-01").
+Group by topic or theme, not chronologically.
+Keep it concise -- a few bullet points per topic.
+Skip trivial entries (typo fixes, formatting, etc.) unless they are part of a larger change.
+For each topic, also highlight:
+- Decisions made and why (e.g. chose X over Y because...)
+- Key insights or lessons learned
+- Open threads or unfinished business
+Only include these if they are actually present in the data -- don't invent them.`
+
 var (
 	recapFormat string
+	recapPrompt string
+	recapAPIKey string
 )
 
 var recapCmd = &cobra.Command{
@@ -42,13 +59,15 @@ Output formats (--format):
   detailed         Commit messages with timestamps and stats
   json             Structured JSON for programmatic use
   markdown         Markdown with full diffs (for AI/documentation)
+  ai               AI-generated summary via OpenAI-compatible API
 
 Examples:
   anker recap
   anker recap today
   anker recap thisweek --format detailed
   anker recap "December 2025" --format markdown > recap.md
-  anker recap 2025-12-01..2025-12-31`,
+  anker recap 2025-12-01..2025-12-31
+  anker recap today --format ai`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Default to "today" if no argument provided
@@ -87,9 +106,9 @@ Examples:
 		}
 
 		// Validate format
-		validFormats := map[string]bool{"simple": true, "detailed": true, "json": true, "markdown": true}
+		validFormats := map[string]bool{"simple": true, "detailed": true, "json": true, "markdown": true, "ai": true}
 		if !validFormats[recapFormat] {
-			return fmt.Errorf("invalid format: %s (must be simple, detailed, json, or markdown)", recapFormat)
+			return fmt.Errorf("invalid format: %s (must be simple, detailed, json, markdown, or ai)", recapFormat)
 		}
 
 		// Collect entries from all sources
@@ -124,6 +143,8 @@ Examples:
 				source = markdown.NewMarkdownSource(cfg.Path, tags, headings)
 			case "obsidian":
 				source = obsidian.NewObsidianSource(cfg.Path)
+			case "claude":
+				source = claude.NewClaudeSource(cfg.Path)
 			default:
 				fmt.Printf("Warning: unsupported source type '%s' at %s\n", cfg.Type, cfg.Path)
 				continue
@@ -180,11 +201,13 @@ Examples:
 		case "simple":
 			return printSimpleRecap(allEntries, tr, timespec)
 		case "detailed":
-			return printDetailedRecap(allEntries, tr, timespec)
+			return printDetailedRecap(os.Stdout, allEntries, tr, timespec)
 		case "json":
 			return printJSONRecap(allEntries, tr, timespec)
 		case "markdown":
 			return printMarkdownRecap(allEntries, tr, timespec)
+		case "ai":
+			return printAIRecap(cfg, allEntries, tr, timespec)
 		default:
 			return fmt.Errorf("unknown format: %s", recapFormat)
 		}
@@ -231,6 +254,9 @@ func printSimpleRecap(allEntries []sources.Entry, tr *timerange.TimeRange, times
 			case "markdown":
 				fmt.Printf("Markdown Notes: %s\n", repoName)
 				fmt.Printf("(%s)\n\n", repoPath)
+			case "claude":
+				fmt.Printf("Claude Sessions: %s\n", repoName)
+				fmt.Printf("(%s)\n\n", repoPath)
 			default:
 				fmt.Printf("%s\n\n", repoName)
 			}
@@ -245,12 +271,12 @@ func printSimpleRecap(allEntries []sources.Entry, tr *timerange.TimeRange, times
 	return nil
 }
 
-func printDetailedRecap(allEntries []sources.Entry, tr *timerange.TimeRange, timespec string) error {
-	fmt.Printf("\n")
-	fmt.Printf("Work Recap (Detailed)\n")
-	fmt.Printf("=====================\n")
-	fmt.Printf("Period: %s - %s\n", tr.From.Format("02 Jan 2006"), tr.To.Format("02 Jan 2006"))
-	fmt.Printf("Total: %d activities\n\n", len(allEntries))
+func printDetailedRecap(w io.Writer, allEntries []sources.Entry, tr *timerange.TimeRange, timespec string) error {
+	fmt.Fprintf(w, "\n")
+	fmt.Fprintf(w, "Work Recap (Detailed)\n")
+	fmt.Fprintf(w, "=====================\n")
+	fmt.Fprintf(w, "Period: %s - %s\n", tr.From.Format("02 Jan 2006"), tr.To.Format("02 Jan 2006"))
+	fmt.Fprintf(w, "Total: %d activities\n\n", len(allEntries))
 
 	// Group by repository
 	byRepo := make(map[string][]sources.Entry)
@@ -275,33 +301,81 @@ func printDetailedRecap(allEntries []sources.Entry, tr *timerange.TimeRange, tim
 		if len(entries) > 0 {
 			switch entries[0].Source {
 			case "obsidian":
-				fmt.Printf("Obsidian Vault\n")
-				fmt.Printf("%s\n\n", repoName)
+				fmt.Fprintf(w, "Obsidian Vault\n")
+				fmt.Fprintf(w, "%s\n\n", repoName)
 			case "git":
-				fmt.Printf("Git Repository: %s\n", repoName)
-				fmt.Printf("(%s)\n\n", repoPath)
+				fmt.Fprintf(w, "Git Repository: %s\n", repoName)
+				fmt.Fprintf(w, "(%s)\n\n", repoPath)
 			case "markdown":
-				fmt.Printf("Markdown Notes: %s\n", repoName)
-				fmt.Printf("(%s)\n\n", repoPath)
+				fmt.Fprintf(w, "Markdown Notes: %s\n", repoName)
+				fmt.Fprintf(w, "(%s)\n\n", repoPath)
+			case "claude":
+				fmt.Fprintf(w, "Claude Sessions: %s\n", repoName)
+				fmt.Fprintf(w, "(%s)\n\n", repoPath)
 			default:
-				fmt.Printf("%s\n\n", repoName)
+				fmt.Fprintf(w, "%s\n\n", repoName)
 			}
 		}
 
 		for _, entry := range entries {
-			fmt.Printf("  %s\n", entry.Timestamp.Format("Mon Jan 2, 15:04"))
-			fmt.Printf("  %s\n", entry.Content)
+			fmt.Fprintf(w, "  %s\n", entry.Timestamp.Format("Mon Jan 2, 15:04"))
+			fmt.Fprintf(w, "  %s\n", entry.Content)
 			if author, ok := entry.Metadata["author"]; ok {
-				fmt.Printf("  Author: %s\n", author)
+				fmt.Fprintf(w, "  Author: %s\n", author)
 			}
 			if hash, ok := entry.Metadata["hash"]; ok {
-				fmt.Printf("  Commit: %s\n", hash[:8])
+				fmt.Fprintf(w, "  Commit: %s\n", hash[:8])
 			}
-			fmt.Println()
+			if slug, ok := entry.Metadata["slug"]; ok {
+				fmt.Fprintf(w, "  Session: %s\n", slug)
+			}
+			fmt.Fprintln(w)
 		}
 	}
 
 	return nil
+}
+
+func printAIRecap(cfg *config.Config, allEntries []sources.Entry, tr *timerange.TimeRange, timespec string) error {
+	// Render detailed output to a string
+	var buf bytes.Buffer
+	if err := printDetailedRecap(&buf, allEntries, tr, timespec); err != nil {
+		return fmt.Errorf("failed to render recap: %w", err)
+	}
+
+	// Resolve prompt: --prompt flag > config > default
+	prompt := defaultAIPrompt
+	if cfg.AIPrompt != "" {
+		prompt = cfg.AIPrompt
+	}
+	if recapPrompt != "" {
+		prompt = recapPrompt
+	}
+
+	// Inject time range context
+	period := fmt.Sprintf("%s to %s", tr.From.Format("2006-01-02"), tr.To.Format("2006-01-02"))
+	prompt = fmt.Sprintf("Period: %s (%s)\n\n%s", timespec, period, prompt)
+
+	if cfg.AIBackend == "cli" {
+		return ai.RunCLI(cfg.AICLICommand, prompt, buf.String(), os.Stdout)
+	}
+
+	// Resolve API key: --api-key flag > AI_API_KEY env > config
+	apiKey := cfg.AIAPIKey
+	if envKey := os.Getenv("AI_API_KEY"); envKey != "" {
+		apiKey = envKey
+	}
+	if recapAPIKey != "" {
+		apiKey = recapAPIKey
+	}
+
+	client := &ai.Client{
+		BaseURL: cfg.AIBaseURL,
+		APIKey:  apiKey,
+		Model:   cfg.AIModel,
+	}
+
+	return client.StreamCompletion(prompt, buf.String(), os.Stdout)
 }
 
 func printJSONRecap(allEntries []sources.Entry, tr *timerange.TimeRange, timespec string) error {
@@ -366,6 +440,9 @@ func printMarkdownRecap(allEntries []sources.Entry, tr *timerange.TimeRange, tim
 			case "markdown":
 				fmt.Printf("## Markdown Notes: %s\n\n", repoName)
 				fmt.Printf("`%s`\n\n", repoPath)
+			case "claude":
+				fmt.Printf("## Claude Sessions: %s\n\n", repoName)
+				fmt.Printf("`%s`\n\n", repoPath)
 			default:
 				fmt.Printf("## %s\n\n", repoName)
 				fmt.Printf("`%s`\n\n", repoPath)
@@ -409,5 +486,11 @@ func splitTrimmed(s, sep string) []string {
 
 func init() {
 	rootCmd.AddCommand(recapCmd)
-	recapCmd.Flags().StringVarP(&recapFormat, "format", "f", "simple", "Output format (simple, detailed, json, markdown)")
+	recapCmd.Flags().StringVarP(&recapFormat, "format", "f", "simple", "Output format (simple, detailed, json, markdown, ai)")
+	recapCmd.Flags().StringVar(&recapPrompt, "prompt", "", "Custom prompt for AI summary (--format ai)")
+	recapCmd.Flags().StringVar(&recapAPIKey, "api-key", "", "API key for AI summary (--format ai)")
+
+	recapCmd.RegisterFlagCompletionFunc("format", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return []string{"simple", "detailed", "json", "markdown", "ai"}, cobra.ShellCompDirectiveNoFileComp
+	})
 }
