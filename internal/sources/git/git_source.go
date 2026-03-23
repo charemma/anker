@@ -52,10 +52,6 @@ func (g *GitSource) Validate() error {
 }
 
 func (g *GitSource) GetEntries(from, to time.Time) ([]sources.Entry, error) {
-	if err := g.Validate(); err != nil {
-		return nil, err
-	}
-
 	// Format: %H|%an|%ae|%at|%s
 	// Hash|Author Name|Author Email|Timestamp|Subject
 	format := "--pretty=format:%H|%an|%ae|%at|%s"

@@ -51,10 +51,6 @@ func (o *ObsidianSource) Validate() error {
 }
 
 func (o *ObsidianSource) GetEntries(from, to time.Time) ([]sources.Entry, error) {
-	if err := o.Validate(); err != nil {
-		return nil, err
-	}
-
 	var entries []sources.Entry
 
 	err := filepath.WalkDir(o.vaultPath, func(path string, d fs.DirEntry, err error) error {

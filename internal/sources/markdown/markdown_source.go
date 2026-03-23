@@ -53,10 +53,6 @@ func (m *MarkdownSource) Validate() error {
 }
 
 func (m *MarkdownSource) GetEntries(from, to time.Time) ([]sources.Entry, error) {
-	if err := m.Validate(); err != nil {
-		return nil, err
-	}
-
 	var entries []sources.Entry
 
 	err := filepath.WalkDir(m.basePath, func(path string, d fs.DirEntry, err error) error {
