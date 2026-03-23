@@ -1,6 +1,7 @@
 package git
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -66,7 +67,7 @@ func TestFindRepoRoot(t *testing.T) {
 				if err == nil {
 					t.Error("expected error, got nil")
 				}
-				if err != ErrNotInRepo {
+				if !errors.Is(err, ErrNotInRepo) {
 					t.Errorf("expected ErrNotInRepo, got %v", err)
 				}
 				return

@@ -160,10 +160,7 @@ func TestClaudeSource_GetEntries_TruncatesLongContent(t *testing.T) {
 	claudeHome := setupTestClaudeHome(t, "project1")
 	now := time.Now().UTC()
 
-	longText := ""
-	for i := 0; i < 300; i++ {
-		longText += "x"
-	}
+	longText := strings.Repeat("x", 300)
 
 	sessionFile := filepath.Join(claudeHome, "projects", "project1", "session1.jsonl")
 	appendSessionLine(t, sessionFile, userLine(longText, now, false))
@@ -293,15 +290,15 @@ func setupTestClaudeHome(t *testing.T, projectDirs ...string) string {
 
 // userLine creates a JSONL line for a user message with text content blocks.
 func userLine(text string, ts time.Time, isMeta bool) string {
-	line := map[string]interface{}{
+	line := map[string]any{
 		"type":      "user",
 		"timestamp": ts.Format(time.RFC3339Nano),
 		"sessionId": "test-session-id",
 		"slug":      "test-slug",
 		"isMeta":    isMeta,
-		"message": map[string]interface{}{
+		"message": map[string]any{
 			"role": "user",
-			"content": []map[string]interface{}{
+			"content": []map[string]any{
 				{"type": "text", "text": text},
 			},
 		},
