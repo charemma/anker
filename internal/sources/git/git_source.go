@@ -3,6 +3,8 @@ package git
 import (
 	"fmt"
 	"os/exec"
+	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,8 +22,7 @@ type GitSource struct {
 func NewGitSource(repoPath, authorEmails string) *GitSource {
 	var emails []string
 	if authorEmails != "" {
-		// Split comma-separated emails and trim whitespace
-		for _, email := range strings.Split(authorEmails, ",") {
+		for email := range strings.SplitSeq(authorEmails, ",") {
 			trimmed := strings.TrimSpace(email)
 			if trimmed != "" {
 				emails = append(emails, trimmed)
@@ -90,17 +91,8 @@ func (g *GitSource) GetEntries(from, to time.Time) ([]sources.Entry, error) {
 		}
 
 		// Filter by author email if specified
-		if len(g.authorEmails) > 0 {
-			found := false
-			for _, email := range g.authorEmails {
-				if parts[2] == email {
-					found = true
-					break
-				}
-			}
-			if !found {
-				continue
-			}
+		if len(g.authorEmails) > 0 && !slices.Contains(g.authorEmails, parts[2]) {
+			continue
 		}
 
 		entry := sources.Entry{
@@ -121,8 +113,7 @@ func (g *GitSource) GetEntries(from, to time.Time) ([]sources.Entry, error) {
 }
 
 func parseUnixTimestamp(s string) (time.Time, error) {
-	var timestamp int64
-	_, err := fmt.Sscanf(s, "%d", &timestamp)
+	timestamp, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
 		return time.Time{}, err
 	}

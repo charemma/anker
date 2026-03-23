@@ -474,8 +474,8 @@ func printMarkdownRecap(allEntries []sources.Entry, tr *timerange.TimeRange, tim
 }
 
 func splitTrimmed(s, sep string) []string {
-	parts := []string{}
-	for _, part := range strings.Split(s, sep) {
+	var parts []string
+	for part := range strings.SplitSeq(s, sep) {
 		trimmed := strings.TrimSpace(part)
 		if trimmed != "" {
 			parts = append(parts, trimmed)
