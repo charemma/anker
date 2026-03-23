@@ -132,7 +132,7 @@ func (c *ClaudeSource) parseSessionFile(path string, from, to time.Time, project
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	scanner := bufio.NewScanner(f)
 	scanner.Buffer(make([]byte, 0, 64*1024), 10*1024*1024) // 10MB max line size

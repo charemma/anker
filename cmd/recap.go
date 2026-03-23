@@ -248,11 +248,11 @@ func printSimpleRecap(allEntries []sources.Entry, tr *timerange.TimeRange, times
 }
 
 func printDetailedRecap(w io.Writer, allEntries []sources.Entry, tr *timerange.TimeRange, timespec string) error {
-	fmt.Fprintf(w, "\n")
-	fmt.Fprintf(w, "Work Recap (Detailed)\n")
-	fmt.Fprintf(w, "=====================\n")
-	fmt.Fprintf(w, "Period: %s - %s\n", tr.From.Format("02 Jan 2006"), tr.To.Format("02 Jan 2006"))
-	fmt.Fprintf(w, "Total: %d activities\n\n", len(allEntries))
+	_, _ = fmt.Fprint(w, "\n")
+	_, _ = fmt.Fprint(w, "Work Recap (Detailed)\n")
+	_, _ = fmt.Fprint(w, "=====================\n")
+	_, _ = fmt.Fprintf(w, "Period: %s - %s\n", tr.From.Format("02 Jan 2006"), tr.To.Format("02 Jan 2006"))
+	_, _ = fmt.Fprintf(w, "Total: %d activities\n\n", len(allEntries))
 
 	// Group by repository
 	byRepo := make(map[string][]sources.Entry)
@@ -277,35 +277,35 @@ func printDetailedRecap(w io.Writer, allEntries []sources.Entry, tr *timerange.T
 		if len(entries) > 0 {
 			switch entries[0].Source {
 			case "obsidian":
-				fmt.Fprintf(w, "Obsidian Vault\n")
-				fmt.Fprintf(w, "%s\n\n", repoName)
+				_, _ = fmt.Fprintf(w, "Obsidian Vault\n")
+				_, _ = fmt.Fprintf(w, "%s\n\n", repoName)
 			case "git":
-				fmt.Fprintf(w, "Git Repository: %s\n", repoName)
-				fmt.Fprintf(w, "(%s)\n\n", repoPath)
+				_, _ = fmt.Fprintf(w, "Git Repository: %s\n", repoName)
+				_, _ = fmt.Fprintf(w, "(%s)\n\n", repoPath)
 			case "markdown":
-				fmt.Fprintf(w, "Markdown Notes: %s\n", repoName)
-				fmt.Fprintf(w, "(%s)\n\n", repoPath)
+				_, _ = fmt.Fprintf(w, "Markdown Notes: %s\n", repoName)
+				_, _ = fmt.Fprintf(w, "(%s)\n\n", repoPath)
 			case "claude":
-				fmt.Fprintf(w, "Claude Sessions: %s\n", repoName)
-				fmt.Fprintf(w, "(%s)\n\n", repoPath)
+				_, _ = fmt.Fprintf(w, "Claude Sessions: %s\n", repoName)
+				_, _ = fmt.Fprintf(w, "(%s)\n\n", repoPath)
 			default:
-				fmt.Fprintf(w, "%s\n\n", repoName)
+				_, _ = fmt.Fprintf(w, "%s\n\n", repoName)
 			}
 		}
 
 		for _, entry := range entries {
-			fmt.Fprintf(w, "  %s\n", entry.Timestamp.Format("Mon Jan 2, 15:04"))
-			fmt.Fprintf(w, "  %s\n", entry.Content)
+			_, _ = fmt.Fprintf(w, "  %s\n", entry.Timestamp.Format("Mon Jan 2, 15:04"))
+			_, _ = fmt.Fprintf(w, "  %s\n", entry.Content)
 			if author, ok := entry.Metadata["author"]; ok {
-				fmt.Fprintf(w, "  Author: %s\n", author)
+				_, _ = fmt.Fprintf(w, "  Author: %s\n", author)
 			}
 			if hash, ok := entry.Metadata["hash"]; ok {
-				fmt.Fprintf(w, "  Commit: %s\n", hash[:8])
+				_, _ = fmt.Fprintf(w, "  Commit: %s\n", hash[:8])
 			}
 			if slug, ok := entry.Metadata["slug"]; ok {
-				fmt.Fprintf(w, "  Session: %s\n", slug)
+				_, _ = fmt.Fprintf(w, "  Session: %s\n", slug)
 			}
-			fmt.Fprintln(w)
+			_, _ = fmt.Fprintln(w)
 		}
 	}
 
@@ -466,7 +466,7 @@ func init() {
 	recapCmd.Flags().StringVar(&recapPrompt, "prompt", "", "Custom prompt for AI summary (--format ai)")
 	recapCmd.Flags().StringVar(&recapAPIKey, "api-key", "", "API key for AI summary (--format ai)")
 
-	recapCmd.RegisterFlagCompletionFunc("format", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	_ = recapCmd.RegisterFlagCompletionFunc("format", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return []string{"simple", "detailed", "json", "markdown", "ai"}, cobra.ShellCompDirectiveNoFileComp
 	})
 }

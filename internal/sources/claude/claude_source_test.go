@@ -322,7 +322,7 @@ func appendSessionLine(t *testing.T, path, line string) {
 	if err != nil {
 		t.Fatalf("failed to open session file %s: %v", path, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if _, err := f.WriteString(line + "\n"); err != nil {
 		t.Fatalf("failed to write to session file %s: %v", path, err)
 	}

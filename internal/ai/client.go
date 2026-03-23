@@ -51,7 +51,7 @@ func (c *Client) StreamCompletion(ctx context.Context, systemPrompt, userContent
 	if err != nil {
 		return fmt.Errorf("API request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -116,10 +116,10 @@ func parseSSEStream(r io.Reader, w io.Writer) error {
 		}
 
 		if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.Content != "" {
-			fmt.Fprint(w, chunk.Choices[0].Delta.Content)
+			_, _ = fmt.Fprint(w, chunk.Choices[0].Delta.Content)
 		}
 	}
 
-	fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w)
 	return scanner.Err()
 }
