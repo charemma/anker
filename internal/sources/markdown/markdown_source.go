@@ -12,6 +12,8 @@ import (
 	"github.com/charemma/anker/internal/sources"
 )
 
+var tagRegex = regexp.MustCompile(`#(\w+)|\[\[([^\]]+)\]\]`)
+
 // MarkdownSource implements the Source interface for markdown files.
 type MarkdownSource struct {
 	basePath string
@@ -162,7 +164,6 @@ func (m *MarkdownSource) hasRelevantTags(line string) bool {
 	}
 
 	// Check for tags in format #tag or [[tag]]
-	tagRegex := regexp.MustCompile(`#(\w+)|\[\[([^\]]+)\]\]`)
 	matches := tagRegex.FindAllStringSubmatch(line, -1)
 
 	for _, match := range matches {

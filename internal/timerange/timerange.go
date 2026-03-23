@@ -10,6 +10,13 @@ import (
 	"github.com/charemma/anker/internal/timerange/locales"
 )
 
+var (
+	monthYearRegex   = regexp.MustCompile(`^(\p{L}+)\s+(\d{4})$`)
+	yearMonthRegex   = regexp.MustCompile(`^(\d{4})\s+(\p{L}+)$`)
+	weekNumberRegex  = regexp.MustCompile(`^week\s+(\d+)(?:\s+(\d{4}))?$`)
+	relativeDayRegex = regexp.MustCompile(`^last\s+(\d+)\s+days?$`)
+)
+
 // TimeRange represents a time interval with a start and end time.
 type TimeRange struct {
 	From time.Time
@@ -156,14 +163,10 @@ func (p *Parser) parseLastMonth() *TimeRange {
 }
 
 func (p *Parser) tryParseMonthYear(spec string) (*TimeRange, bool) {
-	// Try "october 2025" or "oct 2025" (support unicode letters for non-English months)
-	re1 := regexp.MustCompile(`^(\p{L}+)\s+(\d{4})$`)
-	matches := re1.FindStringSubmatch(spec)
+	matches := monthYearRegex.FindStringSubmatch(spec)
 
 	if matches == nil {
-		// Try "2025 october" or "2025 oct"
-		re2 := regexp.MustCompile(`^(\d{4})\s+(\p{L}+)$`)
-		matches = re2.FindStringSubmatch(spec)
+		matches = yearMonthRegex.FindStringSubmatch(spec)
 		if matches != nil {
 			// Swap order: matches[1] is year, matches[2] is month
 			matches = []string{matches[0], matches[2], matches[1]}
@@ -197,9 +200,7 @@ func (p *Parser) tryParseMonthYear(spec string) (*TimeRange, bool) {
 }
 
 func (p *Parser) tryParseWeekNumber(spec string) (*TimeRange, bool) {
-	// Format: "week 32" or "week 32 2025"
-	re := regexp.MustCompile(`^week\s+(\d+)(?:\s+(\d{4}))?$`)
-	matches := re.FindStringSubmatch(spec)
+	matches := weekNumberRegex.FindStringSubmatch(spec)
 	if matches == nil {
 		return nil, false
 	}
@@ -256,9 +257,7 @@ func (p *Parser) tryParseSingleDate(spec string) (*TimeRange, bool) {
 }
 
 func (p *Parser) tryParseRelative(spec string) (*TimeRange, bool) {
-	// Format: "last 7 days"
-	re := regexp.MustCompile(`^last\s+(\d+)\s+days?$`)
-	matches := re.FindStringSubmatch(spec)
+	matches := relativeDayRegex.FindStringSubmatch(spec)
 	if matches == nil {
 		return nil, false
 	}
