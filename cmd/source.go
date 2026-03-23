@@ -12,11 +12,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// loadConfig is a helper to load config without failing the command if config doesn't exist
-func loadConfig() (*config.Config, error) {
-	return config.Load()
-}
-
 var (
 	gitAuthors       []string
 	markdownTags     []string
@@ -68,7 +63,7 @@ Examples:
 			return fmt.Errorf("failed to initialize storage: %w", err)
 		}
 
-		config := sources.Config{
+		srcCfg := sources.Config{
 			Type:     sourceType,
 			Path:     path,
 			Metadata: make(map[string]string),
@@ -82,16 +77,16 @@ Examples:
 		case "git":
 			// Use --author flags if provided, otherwise use config, otherwise use git config
 			if len(gitAuthors) > 0 {
-				config.Metadata["author"] = strings.Join(gitAuthors, ",")
+				srcCfg.Metadata["author"] = strings.Join(gitAuthors, ",")
 			} else {
 				// Fallback to anker config if available
-				cfg, err := loadConfig()
+				cfg, err := config.Load()
 				if err == nil && cfg.AuthorEmail != "" {
-					config.Metadata["author"] = cfg.AuthorEmail
+					srcCfg.Metadata["author"] = cfg.AuthorEmail
 				} else {
 					// Final fallback: git config --global user.email
 					if email, err := git.GetAuthorEmail(); err == nil && email != "" {
-						config.Metadata["author"] = email
+						srcCfg.Metadata["author"] = email
 						fmt.Printf("using git user.email: %s\n", email)
 					} else {
 						fmt.Println("warning: no author email configured - will track ALL commits in this repo")
@@ -102,10 +97,10 @@ Examples:
 			}
 		case "markdown":
 			if len(markdownTags) > 0 {
-				config.Metadata["tags"] = strings.Join(markdownTags, ",")
+				srcCfg.Metadata["tags"] = strings.Join(markdownTags, ",")
 			}
 			if len(markdownHeadings) > 0 {
-				config.Metadata["headings"] = strings.Join(markdownHeadings, ",")
+				srcCfg.Metadata["headings"] = strings.Join(markdownHeadings, ",")
 			}
 		case "obsidian":
 			// Obsidian source has no additional metadata for now
@@ -113,12 +108,12 @@ Examples:
 			if path == "" {
 				path = claudesource.DefaultClaudeHome()
 			}
-			config.Path = path
+			srcCfg.Path = path
 		default:
 			return fmt.Errorf("unsupported source type: %s (supported: git, markdown, obsidian, claude)", sourceType)
 		}
 
-		if err := store.AddSource(config); err != nil {
+		if err := store.AddSource(srcCfg); err != nil {
 			return fmt.Errorf("failed to add source: %w", err)
 		}
 
