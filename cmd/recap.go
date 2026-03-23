@@ -12,10 +12,7 @@ import (
 	"github.com/charemma/anker/internal/ai"
 	"github.com/charemma/anker/internal/config"
 	"github.com/charemma/anker/internal/sources"
-	"github.com/charemma/anker/internal/sources/claude"
 	"github.com/charemma/anker/internal/sources/git"
-	"github.com/charemma/anker/internal/sources/markdown"
-	"github.com/charemma/anker/internal/sources/obsidian"
 	"github.com/charemma/anker/internal/storage"
 	"github.com/charemma/anker/internal/timerange"
 	"github.com/spf13/cobra"
@@ -113,41 +110,19 @@ Examples:
 
 		// Collect entries from all sources
 		var allEntries []sources.Entry
-		var gitSources []*git.GitSource // Keep git sources for diff enrichment
+		var gitSources []*git.GitSource
 
 		for _, cfg := range sourceConfigs {
-			var source sources.Source
-
-			switch cfg.Type {
-			case "git":
-				authorEmail := ""
-				if email, ok := cfg.Metadata["author"]; ok {
-					authorEmail = email
-				}
-				gitSource := git.NewGitSource(cfg.Path, authorEmail)
-				source = gitSource
-				if recapFormat == "markdown" {
-					gitSources = append(gitSources, gitSource)
-				}
-			case "markdown":
-				tags := []string{}
-				headings := []string{}
-
-				if tagsStr, ok := cfg.Metadata["tags"]; ok && tagsStr != "" {
-					tags = splitTrimmed(tagsStr, ",")
-				}
-				if headingsStr, ok := cfg.Metadata["headings"]; ok && headingsStr != "" {
-					headings = splitTrimmed(headingsStr, ",")
-				}
-
-				source = markdown.NewMarkdownSource(cfg.Path, tags, headings)
-			case "obsidian":
-				source = obsidian.NewObsidianSource(cfg.Path)
-			case "claude":
-				source = claude.NewClaudeSource(cfg.Path)
-			default:
-				fmt.Printf("Warning: unsupported source type '%s' at %s\n", cfg.Type, cfg.Path)
+			source, err := createSource(cfg)
+			if err != nil {
+				fmt.Printf("Warning: %v at %s\n", err, cfg.Path)
 				continue
+			}
+
+			if recapFormat == "markdown" {
+				if gs, ok := source.(*git.GitSource); ok {
+					gitSources = append(gitSources, gs)
+				}
 			}
 
 			entries, err := source.GetEntries(tr.From, tr.To)
