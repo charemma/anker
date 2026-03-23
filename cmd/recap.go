@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -350,7 +351,7 @@ func printAIRecap(cfg *config.Config, allEntries []sources.Entry, tr *timerange.
 		Model:   cfg.AIModel,
 	}
 
-	return client.StreamCompletion(prompt, buf.String(), os.Stdout)
+	return client.StreamCompletion(context.Background(), prompt, buf.String(), os.Stdout)
 }
 
 func printJSONRecap(allEntries []sources.Entry, tr *timerange.TimeRange, timespec string) error {

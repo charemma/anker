@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"strings"
@@ -14,7 +15,7 @@ func TestBuildRequest_BasicFields(t *testing.T) {
 		Model:   "gpt-4",
 	}
 
-	req, err := c.BuildRequest("system prompt", "user content")
+	req, err := c.BuildRequest(t.Context(), "system prompt", "user content")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -60,7 +61,7 @@ func TestBuildRequest_NoAPIKey(t *testing.T) {
 		Model:   "llama3",
 	}
 
-	req, err := c.BuildRequest("prompt", "content")
+	req, err := c.BuildRequest(t.Context(), "prompt", "content")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -71,12 +72,13 @@ func TestBuildRequest_NoAPIKey(t *testing.T) {
 }
 
 func TestBuildRequest_TrailingSlashNormalization(t *testing.T) {
+	ctx := t.Context()
 	for _, baseURL := range []string{
 		"https://api.example.com/v1",
 		"https://api.example.com/v1/",
 	} {
 		c := &Client{BaseURL: baseURL, Model: "test"}
-		req, err := c.BuildRequest("p", "c")
+		req, err := c.BuildRequest(ctx, "p", "c")
 		if err != nil {
 			t.Fatalf("unexpected error for %s: %v", baseURL, err)
 		}
@@ -88,7 +90,7 @@ func TestBuildRequest_TrailingSlashNormalization(t *testing.T) {
 
 func TestBuildRequest_MissingBaseURL(t *testing.T) {
 	c := &Client{Model: "test"}
-	_, err := c.BuildRequest("p", "c")
+	_, err := c.BuildRequest(t.Context(), "p", "c")
 	if err == nil {
 		t.Fatal("expected error for missing base URL")
 	}
@@ -96,7 +98,7 @@ func TestBuildRequest_MissingBaseURL(t *testing.T) {
 
 func TestStreamCompletion_EmptyContent(t *testing.T) {
 	c := &Client{BaseURL: "http://localhost/v1", Model: "test"}
-	err := c.StreamCompletion("prompt", "", io.Discard)
+	err := c.StreamCompletion(t.Context(), "prompt", "", io.Discard)
 	if err == nil {
 		t.Fatal("expected error for empty content")
 	}
@@ -104,7 +106,7 @@ func TestStreamCompletion_EmptyContent(t *testing.T) {
 
 func TestStreamCompletion_MissingBaseURL(t *testing.T) {
 	c := &Client{Model: "test"}
-	err := c.StreamCompletion("prompt", "content", io.Discard)
+	err := c.StreamCompletion(context.Background(), "prompt", "content", io.Discard)
 	if err == nil {
 		t.Fatal("expected error for missing base URL")
 	}
