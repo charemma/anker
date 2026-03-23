@@ -22,12 +22,10 @@ without time tracking, productivity metrics, or background agents.`,
 }
 
 func Execute() {
+	rootCmd.Version = Version
+	rootCmd.SetVersionTemplate(fmt.Sprintf("anker version %s (commit: %s, built: %s)\n", Version, Commit, Date))
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-}
-
-func init() {
-	rootCmd.SetVersionTemplate(fmt.Sprintf("anker version %s (commit: %s, built: %s)\n", Version, Commit, Date))
 }
