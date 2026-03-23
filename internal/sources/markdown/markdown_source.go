@@ -3,6 +3,7 @@ package markdown
 import (
 	"bufio"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -58,16 +59,21 @@ func (m *MarkdownSource) GetEntries(from, to time.Time) ([]sources.Entry, error)
 
 	var entries []sources.Entry
 
-	err := filepath.Walk(m.basePath, func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(m.basePath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
-		if info.IsDir() {
+		if d.IsDir() {
 			return nil
 		}
 
 		if !strings.HasSuffix(path, ".md") {
+			return nil
+		}
+
+		info, err := d.Info()
+		if err != nil {
 			return nil
 		}
 

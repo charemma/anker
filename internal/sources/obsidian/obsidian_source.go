@@ -2,6 +2,7 @@ package obsidian
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -56,15 +57,15 @@ func (o *ObsidianSource) GetEntries(from, to time.Time) ([]sources.Entry, error)
 
 	var entries []sources.Entry
 
-	err := filepath.Walk(o.vaultPath, func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(o.vaultPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
 		// Skip directories
-		if info.IsDir() {
+		if d.IsDir() {
 			// Skip .obsidian and .trash folders
-			if info.Name() == ".obsidian" || info.Name() == ".trash" {
+			if d.Name() == ".obsidian" || d.Name() == ".trash" {
 				return filepath.SkipDir
 			}
 			return nil
@@ -72,6 +73,11 @@ func (o *ObsidianSource) GetEntries(from, to time.Time) ([]sources.Entry, error)
 
 		// Only process markdown files
 		if !strings.HasSuffix(path, ".md") {
+			return nil
+		}
+
+		info, err := d.Info()
+		if err != nil {
 			return nil
 		}
 
