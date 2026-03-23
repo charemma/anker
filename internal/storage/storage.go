@@ -11,15 +11,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type Repo struct {
-	Path     string    `yaml:"path"`
-	LastSeen time.Time `yaml:"last_seen"`
-}
-
-type RepoRegistry struct {
-	Repos []Repo `yaml:"repos"`
-}
-
 type SourceRegistry struct {
 	Sources []sources.Config `yaml:"sources"`
 }
@@ -42,63 +33,6 @@ func NewStore() (*Store, error) {
 	}
 
 	return &Store{baseDir: baseDir}, nil
-}
-
-// TrackRepo adds or updates a repository in the registry.
-func (s *Store) TrackRepo(repoPath string) error {
-	registryPath := filepath.Join(s.baseDir, "repos.yaml")
-
-	registry, err := s.loadRegistry(registryPath)
-	if err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("failed to load registry: %w", err)
-	}
-
-	now := time.Now()
-	found := false
-
-	for i := range registry.Repos {
-		if registry.Repos[i].Path == repoPath {
-			registry.Repos[i].LastSeen = now
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		registry.Repos = append(registry.Repos, Repo{
-			Path:     repoPath,
-			LastSeen: now,
-		})
-	}
-
-	return s.saveRegistry(registryPath, registry)
-}
-
-func (s *Store) loadRegistry(path string) (*RepoRegistry, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return &RepoRegistry{}, err
-	}
-
-	var registry RepoRegistry
-	if err := yaml.Unmarshal(data, &registry); err != nil {
-		return nil, fmt.Errorf("failed to parse registry: %w", err)
-	}
-
-	return &registry, nil
-}
-
-func (s *Store) saveRegistry(path string, registry *RepoRegistry) error {
-	data, err := yaml.Marshal(registry)
-	if err != nil {
-		return fmt.Errorf("failed to marshal registry: %w", err)
-	}
-
-	if err := os.WriteFile(path, data, 0644); err != nil {
-		return fmt.Errorf("failed to write registry: %w", err)
-	}
-
-	return nil
 }
 
 // AddSource adds or updates a source in the registry.
