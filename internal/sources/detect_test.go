@@ -142,7 +142,10 @@ func TestDetectType(t *testing.T) {
 }
 
 func TestDetectType_ClaudePath(t *testing.T) {
-	t.Run("directory with .claude/projects child", func(t *testing.T) {
+	t.Run("parent directory containing .claude/projects is not claude", func(t *testing.T) {
+		// A directory that merely contains .claude/projects/ as a child must NOT
+		// be detected as a claude source. This was the root cause of the home dir
+		// bug: isClaudePath matched ~/ because ~/.claude/projects/ exists.
 		dir := t.TempDir()
 		mkDir(t, dir, filepath.Join(".claude", "projects"))
 
@@ -151,14 +154,33 @@ func TestDetectType_ClaudePath(t *testing.T) {
 			t.Fatalf("DetectType error: %v", err)
 		}
 
-		found := false
 		for _, d := range got {
 			if d.Type == "claude" {
+				t.Errorf("expected no claude type for parent dir, got %v", got)
+			}
+		}
+	})
+
+	t.Run("markdown not blocked by .claude/projects child", func(t *testing.T) {
+		// After the fix, a dir with .claude/projects child + .md files returns
+		// markdown (previously was incorrectly blocked by the false claude match).
+		dir := t.TempDir()
+		mkDir(t, dir, filepath.Join(".claude", "projects"))
+		mkFile(t, dir, "notes.md")
+
+		got, err := DetectType(dir)
+		if err != nil {
+			t.Fatalf("DetectType error: %v", err)
+		}
+
+		found := false
+		for _, d := range got {
+			if d.Type == "markdown" {
 				found = true
 			}
 		}
 		if !found {
-			t.Errorf("expected claude type, got %v", got)
+			t.Errorf("expected markdown type, got %v", got)
 		}
 	})
 }

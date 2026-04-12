@@ -132,21 +132,14 @@ func hasMDFiles(path string) bool {
 	return false
 }
 
-// isClaudePath returns true if path is under ~/.claude or contains .claude/projects/.
+// isClaudePath returns true if path is ~/.claude itself or any path under it.
 func isClaudePath(abs string) bool {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return false
 	}
 	claudeHome := filepath.Join(home, ".claude")
-
-	// matches ~/.claude itself or any subpath
-	if abs == claudeHome || strings.HasPrefix(abs, claudeHome+string(filepath.Separator)) {
-		return true
-	}
-
-	// also matches if .claude/projects/ is a child directory
-	return isDir(filepath.Join(abs, ".claude", "projects"))
+	return abs == claudeHome || strings.HasPrefix(abs, claudeHome+string(filepath.Separator))
 }
 
 // buildRegisteredSet builds an abs-path lookup map from the registered configs.
