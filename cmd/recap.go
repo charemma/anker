@@ -83,7 +83,11 @@ Examples:
 		}
 
 		if len(sourceConfigs) == 0 {
-			fmt.Println("No sources configured. Use 'anker source add' to get started.")
+			fmt.Println("No sources configured yet.")
+			fmt.Println()
+			fmt.Println("Quick setup options:")
+			fmt.Println("  anker source add        Add the current directory")
+			fmt.Println("  anker source add ~/code Add a directory of repos")
 			return nil
 		}
 
