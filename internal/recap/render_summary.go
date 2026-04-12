@@ -89,14 +89,24 @@ func parseCCType(msg string) string {
 	return ""
 }
 
+// entryDisplayContent returns a clean display string for an entry.
+// For obsidian it strips the trailing " (modified)" / " (created)" action suffix.
+func entryDisplayContent(e sources.Entry) string {
+	if e.Source == "obsidian" {
+		if idx := strings.LastIndex(e.Content, " ("); idx >= 0 {
+			return e.Content[:idx]
+		}
+	}
+	return e.Content
+}
+
 // sourceAgg aggregates entries from one source label for a single day.
 type sourceAgg struct {
-	label   string
-	srcType string
-	count   int
-	ccTypes map[string]int
-	// lastContent is used as a snippet for single-entry sources like claude.
-	lastContent string
+	label      string
+	srcType    string
+	count      int
+	ccTypes    map[string]int
+	allContent []string // display content for every entry, oldest first
 }
 
 // aggregateBySource groups a day's entries by source label.
@@ -118,7 +128,7 @@ func aggregateBySource(entries []sources.Entry) []sourceAgg {
 			order = append(order, lbl)
 		}
 		agg.count++
-		agg.lastContent = e.Content
+		agg.allContent = append(agg.allContent, entryDisplayContent(e))
 		if e.Source == "git" {
 			if t := parseCCType(e.Content); t != "" {
 				agg.ccTypes[t]++
@@ -208,9 +218,20 @@ func buildFooter(entries []sources.Entry) string {
 	return total + " · " + strings.Join(parts, ", ")
 }
 
+// showTopN is the maximum number of entry lines shown per source in week view.
+const showTopN = 3
+
+// rangeIsShort reports whether the time range is short enough to warrant
+// per-entry detail lines (≤ 7 days).
+func rangeIsShort(result *RecapResult) bool {
+	days := result.TimeRange.To.Sub(result.TimeRange.From).Hours() / 24
+	return days <= 7
+}
+
 // RenderSummary is the default renderer. For timespec "today" it shows all
-// entries individually with a time column. For all other timespecs it shows
-// a day-by-day aggregated view. When plain is true, no ANSI codes are emitted.
+// entries individually with a time column. For short ranges (≤7 days) it shows
+// a day-by-day view with top-3 entry lines per source. For longer ranges it
+// shows aggregate numbers only. When plain is true, no ANSI codes are emitted.
 func RenderSummary(w io.Writer, result *RecapResult, plain bool) error {
 	if result.Timespec == "today" {
 		return renderToday(w, result, plain)
@@ -292,9 +313,10 @@ func renderWeek(w io.Writer, result *RecapResult, plain bool) error {
 		return nil
 	}
 
+	showDetails := rangeIsShort(result)
 	days := GroupByDay(entries, result.TimeRange.From, result.TimeRange.To)
 
-	// Week header
+	// Header
 	_, _ = fmt.Fprintln(w)
 	weekHeader := buildWeekHeader(result)
 	_, _ = fmt.Fprintln(w, lipgloss.NewStyle().Bold(true).Render(weekHeader))
@@ -304,7 +326,6 @@ func renderWeek(w io.Writer, result *RecapResult, plain bool) error {
 		dayLabel := germanDate(day.Date, true)
 
 		if len(day.Entries) == 0 {
-			// Empty day: show dimmed on one line
 			emptyLine := fmt.Sprintf("%-24s -", dayLabel)
 			_, _ = fmt.Fprintln(w, ui.StyleMuted.Render(emptyLine))
 			continue
@@ -316,7 +337,6 @@ func renderWeek(w io.Writer, result *RecapResult, plain bool) error {
 		_, _ = fmt.Fprintln(w, ui.StyleDay.Render(dayLine))
 		_, _ = fmt.Fprintln(w)
 
-		// Compute max label width for this day
 		aggs := aggregateBySource(day.Entries)
 		maxLabelW := 0
 		for _, a := range aggs {
@@ -340,12 +360,25 @@ func renderWeek(w io.Writer, result *RecapResult, plain bool) error {
 				line += "  " + ui.StyleMuted.Render(cc)
 			}
 
-			// Content snippet for single-entry non-git sources
-			if agg.srcType != "git" && agg.count == 1 && agg.lastContent != "" {
-				line += "  " + ui.StyleMuted.Render(agg.lastContent)
-			}
-
 			_, _ = fmt.Fprintln(w, line)
+
+			// For short ranges: show top-N entry lines below the summary row.
+			if showDetails && agg.count > 0 {
+				indent := strings.Repeat(" ", 2+maxLabelW+2)
+				shown := agg.allContent
+				rest := 0
+				if len(shown) > showTopN {
+					rest = len(shown) - showTopN
+					shown = shown[:showTopN]
+				}
+				for _, c := range shown {
+					_, _ = fmt.Fprintln(w, ui.StyleMuted.Render(indent+c))
+				}
+				if rest > 0 {
+					_, _ = fmt.Fprintln(w, ui.StyleMuted.Render(
+						fmt.Sprintf("%s[+%d weitere]", indent, rest)))
+				}
+			}
 		}
 	}
 
@@ -354,7 +387,7 @@ func renderWeek(w io.Writer, result *RecapResult, plain bool) error {
 	return nil
 }
 
-// buildWeekHeader returns a formatted week header like "Woche 15  (7.-11. April)   24 Aktivitäten in 3 Quellen".
+// buildWeekHeader returns a header like "Woche 15  (7.-11. April)   24 Aktivitäten in 3 Quellen".
 func buildWeekHeader(result *RecapResult) string {
 	from := result.TimeRange.From
 	to := result.TimeRange.To
