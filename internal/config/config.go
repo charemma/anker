@@ -14,32 +14,14 @@ import (
 
 // Config holds user configuration for anker.
 type Config struct {
-	WeekStart    string   `yaml:"week_start"`              // "monday" or "sunday"
-	AuthorEmail  string   `yaml:"author_email,omitempty"`  // legacy single email, kept for backward compat
-	AuthorEmails []string `yaml:"author_emails,omitempty"` // multi-email list (canonical)
-	AIBaseURL    string   `yaml:"ai_base_url"`             // OpenAI-compatible API base URL
-	AIModel      string   `yaml:"ai_model"`                // model name for AI summaries
-	AIAPIKey     string   `yaml:"ai_api_key"`              // API key (prefer env var AI_API_KEY)
-	AIPrompt     string   `yaml:"ai_prompt"`               // custom prompt for AI summaries
-	AIBackend    string   `yaml:"ai_backend"`              // "api" or "cli"
-	AICLICommand string   `yaml:"ai_cli_command"`          // CLI tool for ai_backend: cli
-}
-
-// AllEmails returns the deduplicated list of author emails.
-// AuthorEmails takes precedence; AuthorEmail is included for backward compatibility.
-func (c *Config) AllEmails() []string {
-	seen := make(map[string]bool)
-	var result []string
-	for _, e := range c.AuthorEmails {
-		if e != "" && !seen[e] {
-			seen[e] = true
-			result = append(result, e)
-		}
-	}
-	if c.AuthorEmail != "" && !seen[c.AuthorEmail] {
-		result = append(result, c.AuthorEmail)
-	}
-	return result
+	WeekStart    string `yaml:"week_start"`             // "monday" or "sunday"
+	AuthorEmail  string `yaml:"author_email,omitempty"` // default git author email for filtering
+	AIBaseURL    string `yaml:"ai_base_url"`            // OpenAI-compatible API base URL
+	AIModel      string `yaml:"ai_model"`               // model name for AI summaries
+	AIAPIKey     string `yaml:"ai_api_key"`             // API key (prefer env var AI_API_KEY)
+	AIPrompt     string `yaml:"ai_prompt"`              // custom prompt for AI summaries
+	AIBackend    string `yaml:"ai_backend"`             // "api" or "cli"
+	AICLICommand string `yaml:"ai_cli_command"`         // CLI tool for ai_backend: cli
 }
 
 // DefaultConfig returns the default configuration.

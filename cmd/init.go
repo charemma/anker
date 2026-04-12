@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/charemma/anker/internal/config"
@@ -642,27 +641,28 @@ func initStepMarkdown(store *storage.Store, registered []sources.Config) (int, e
 }
 
 // initStepEmail handles the email configuration step.
-// Returns true if emails were updated and config should be saved.
+// Returns true if the email was updated and config should be saved.
 func initStepEmail(cfg *config.Config) (bool, error) {
-	existing := cfg.AllEmails()
-
-	if len(existing) > 0 {
-		initCheckLine("Git author", strings.Join(existing, ", ")+" (already configured)")
+	// Already persisted in config.yaml: show compact line, nothing to do.
+	if cfg.AuthorEmail != "" {
+		initCheckLine("Git author", cfg.AuthorEmail+" (already configured)")
 		return false, nil
 	}
 
-	defaultEmail, _ := git.GetAuthorEmail()
-	if defaultEmail == "" {
-		// Nothing to seed from; skip silently.
+	// Found in git config: just show it, no question needed.
+	gitEmail, _ := git.GetAuthorEmail()
+	if gitEmail != "" {
+		initCheckLine("Git author", gitEmail)
 		return false, nil
 	}
 
+	// Nothing known: ask.
 	initSectionHeader("Git author email")
 
-	firstEmail := defaultEmail
+	var email string
 	if err := huh.NewInput().
 		Title("Git author email for filtering commits").
-		Value(&firstEmail).
+		Value(&email).
 		Run(); initIsAbort(err) {
 		fmt.Println()
 		return false, nil
@@ -671,49 +671,12 @@ func initStepEmail(cfg *config.Config) (bool, error) {
 	}
 	fmt.Println()
 
-	var collected []string
-	if firstEmail != "" {
-		collected = append(collected, firstEmail)
-	}
-
-	for {
-		var addAnother bool
-		if err := huh.NewConfirm().
-			Title("Add another email address?").
-			Affirmative("Yes").
-			Negative("No").
-			Value(&addAnother).
-			Run(); initIsAbort(err) || !addAnother {
-			break
-		} else if err != nil {
-			return false, err
-		}
-
-		var email string
-		if err := huh.NewInput().
-			Title("Additional email address").
-			Value(&email).
-			Run(); initIsAbort(err) {
-			break
-		} else if err != nil {
-			return false, err
-		}
-		fmt.Println()
-
-		if email != "" && !slices.Contains(collected, email) {
-			collected = append(collected, email)
-		}
-	}
-
-	fmt.Println()
-
-	if len(collected) == 0 {
+	if email == "" {
 		return false, nil
 	}
 
-	cfg.AuthorEmails = collected
-	cfg.AuthorEmail = collected[0]
-	fmt.Println(styleSuccess.Render("✓ Git author: " + strings.Join(collected, ", ")))
+	cfg.AuthorEmail = email
+	fmt.Println(styleSuccess.Render("✓ Git author: " + email))
 	fmt.Println()
 	return true, nil
 }
