@@ -191,14 +191,14 @@ func (c *ClaudeSource) GetEntries(from, to time.Time) ([]sources.Entry, error) {
 		projectDir := d.Name()
 		matches, err := filepath.Glob(filepath.Join(projectsDir, projectDir, "*.jsonl"))
 		if err != nil {
-			fmt.Fprintf(c.warn, "warning: %s: failed to glob session files: %v\n", projectDir, err)
+			_, _ = fmt.Fprintf(c.warn, "warning: %s: failed to glob session files: %v\n", projectDir, err)
 			continue
 		}
 
 		for _, path := range matches {
 			fileEntries, err := c.parseSessions(path, from, to, projectDir)
 			if err != nil {
-				fmt.Fprintf(c.warn, "warning: %s: %v\n", filepath.Base(path), err)
+				_, _ = fmt.Fprintf(c.warn, "warning: %s: %v\n", filepath.Base(path), err)
 				continue
 			}
 			entries = append(entries, fileEntries...)
@@ -229,7 +229,7 @@ func (c *ClaudeSource) parseSessions(path string, from, to time.Time, projectDir
 
 		var jl jsonlLine
 		if err := json.Unmarshal(line, &jl); err != nil {
-			fmt.Fprintf(c.warn, "warning: %s: skipping line %d: %v\n", sessionFile, lineNum, err)
+			_, _ = fmt.Fprintf(c.warn, "warning: %s: skipping line %d: %v\n", sessionFile, lineNum, err)
 			parseErrors++
 			continue
 		}
@@ -241,7 +241,7 @@ func (c *ClaudeSource) parseSessions(path string, from, to time.Time, projectDir
 
 		ts, err := time.Parse(time.RFC3339Nano, jl.Timestamp)
 		if err != nil {
-			fmt.Fprintf(c.warn, "warning: %s: skipping line %d: invalid timestamp: %v\n", sessionFile, lineNum, err)
+			_, _ = fmt.Fprintf(c.warn, "warning: %s: skipping line %d: invalid timestamp: %v\n", sessionFile, lineNum, err)
 			parseErrors++
 			continue
 		}
@@ -271,7 +271,7 @@ func (c *ClaudeSource) parseSessions(path string, from, to time.Time, projectDir
 
 		var msg message
 		if err := json.Unmarshal(jl.Message, &msg); err != nil {
-			fmt.Fprintf(c.warn, "warning: %s: skipping line %d: invalid message: %v\n", sessionFile, lineNum, err)
+			_, _ = fmt.Fprintf(c.warn, "warning: %s: skipping line %d: invalid message: %v\n", sessionFile, lineNum, err)
 			parseErrors++
 			continue
 		}
@@ -289,7 +289,7 @@ func (c *ClaudeSource) parseSessions(path string, from, to time.Time, projectDir
 	}
 
 	if parseErrors > 0 && len(sessions) == 0 {
-		fmt.Fprintf(c.warn, "warning: %s: all %d parsed lines failed, file may be corrupted or incompatible\n", sessionFile, parseErrors)
+		_, _ = fmt.Fprintf(c.warn, "warning: %s: all %d parsed lines failed, file may be corrupted or incompatible\n", sessionFile, parseErrors)
 	}
 
 	// Convert sessions to entries, filtering by time range (start time in [from, to])
