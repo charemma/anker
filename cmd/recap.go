@@ -127,6 +127,7 @@ Examples:
 				AIBaseURL:    cfg.AIBaseURL,
 				AIModel:      cfg.AIModel,
 				AIAPIKey:     cfg.AIAPIKey,
+				EntryCount:   len(result.Entries),
 			}, recapPrompt, recapAPIKey)
 		}
 
