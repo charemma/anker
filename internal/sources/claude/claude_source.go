@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,7 +18,8 @@ const maxContentLength = 200
 // ClaudeSource implements the Source interface for Claude Code session data.
 // It scans all project directories under <claudeHome>/projects/ for JSONL session files.
 type ClaudeSource struct {
-	claudeHome string // path to ~/.claude
+	claudeHome string    // path to ~/.claude
+	warn       io.Writer // warning output, defaults to os.Stderr
 }
 
 // jsonlLine represents a single line from a Claude Code session JSONL file.
@@ -49,7 +51,7 @@ type contentBlock struct {
 // NewClaudeSource creates a new Claude Code session source.
 // claudeHome is the path to the .claude directory (typically ~/.claude).
 func NewClaudeSource(claudeHome string) *ClaudeSource {
-	return &ClaudeSource{claudeHome: claudeHome}
+	return &ClaudeSource{claudeHome: claudeHome, warn: os.Stderr}
 }
 
 // DefaultClaudeHome returns the default ~/.claude path.
@@ -116,12 +118,14 @@ func (c *ClaudeSource) GetEntries(from, to time.Time) ([]sources.Entry, error) {
 		projectDir := d.Name()
 		matches, err := filepath.Glob(filepath.Join(projectsDir, projectDir, "*.jsonl"))
 		if err != nil {
+			fmt.Fprintf(c.warn, "warning: %s: failed to glob session files: %v\n", projectDir, err)
 			continue
 		}
 
 		for _, path := range matches {
 			fileEntries, err := c.parseSessionFile(path, from, to, projectDir)
 			if err != nil {
+				fmt.Fprintf(c.warn, "warning: %s: %v\n", filepath.Base(path), err)
 				continue
 			}
 			entries = append(entries, fileEntries...)
@@ -143,12 +147,17 @@ func (c *ClaudeSource) parseSessionFile(path string, from, to time.Time, project
 
 	var entries []sources.Entry
 	sessionFile := filepath.Base(path)
+	lineNum := 0
+	parseErrors := 0
 
 	for scanner.Scan() {
 		line := scanner.Bytes()
+		lineNum++
 
 		var jl jsonlLine
 		if err := json.Unmarshal(line, &jl); err != nil {
+			fmt.Fprintf(c.warn, "warning: %s: skipping line %d: %v\n", sessionFile, lineNum, err)
+			parseErrors++
 			continue
 		}
 
@@ -162,6 +171,8 @@ func (c *ClaudeSource) parseSessionFile(path string, from, to time.Time, project
 
 		ts, err := time.Parse(time.RFC3339Nano, jl.Timestamp)
 		if err != nil {
+			fmt.Fprintf(c.warn, "warning: %s: skipping line %d: invalid timestamp: %v\n", sessionFile, lineNum, err)
+			parseErrors++
 			continue
 		}
 
@@ -171,6 +182,8 @@ func (c *ClaudeSource) parseSessionFile(path string, from, to time.Time, project
 
 		var msg message
 		if err := json.Unmarshal(jl.Message, &msg); err != nil {
+			fmt.Fprintf(c.warn, "warning: %s: skipping line %d: invalid message: %v\n", sessionFile, lineNum, err)
+			parseErrors++
 			continue
 		}
 
@@ -213,6 +226,10 @@ func (c *ClaudeSource) parseSessionFile(path string, from, to time.Time, project
 		}
 
 		entries = append(entries, entry)
+	}
+
+	if parseErrors > 0 && len(entries) == 0 {
+		fmt.Fprintf(c.warn, "warning: %s: all %d parsed lines failed, file may be corrupted or incompatible\n", sessionFile, parseErrors)
 	}
 
 	return entries, scanner.Err()

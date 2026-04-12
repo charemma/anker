@@ -1,6 +1,7 @@
 package claude
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -229,6 +230,37 @@ func TestClaudeSource_GetEntries_SkipsSystemInterrupts(t *testing.T) {
 
 	if len(entries) != 1 {
 		t.Errorf("expected 1 entry (interrupt should be skipped), got %d", len(entries))
+	}
+}
+
+func TestClaudeSource_GetEntries_LogsParseErrors(t *testing.T) {
+	claudeHome := setupTestClaudeHome(t, "project1")
+	now := time.Now().UTC()
+
+	sessionFile := filepath.Join(claudeHome, "projects", "project1", "session1.jsonl")
+	appendSessionLine(t, sessionFile, "this is not valid json")
+	appendSessionLine(t, sessionFile, `{"type":"user","timestamp":"not-a-timestamp","sessionId":"s1","message":{"role":"user","content":"hello"}}`)
+	appendSessionLine(t, sessionFile, userLine("valid message", now, false))
+
+	var buf bytes.Buffer
+	source := NewClaudeSource(claudeHome)
+	source.warn = &buf
+
+	entries, err := source.GetEntries(now.Add(-1*time.Hour), now.Add(1*time.Hour))
+	if err != nil {
+		t.Fatalf("GetEntries failed: %v", err)
+	}
+
+	if len(entries) != 1 {
+		t.Errorf("expected 1 valid entry, got %d", len(entries))
+	}
+
+	warnings := buf.String()
+	if !strings.Contains(warnings, "skipping line 1") {
+		t.Errorf("expected warning for line 1 (bad json), got: %s", warnings)
+	}
+	if !strings.Contains(warnings, "skipping line 2") {
+		t.Errorf("expected warning for line 2 (bad timestamp), got: %s", warnings)
 	}
 }
 
