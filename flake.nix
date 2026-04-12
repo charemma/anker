@@ -35,7 +35,7 @@
         pname = "anker";
         inherit version;
         src = ./.;
-        vendorHash = "sha256-komX1AmHt2NoF1x6xsNa2RFkfVzOXfYEMPhT0zwMxjw=";
+        vendorHash = "sha256-oq2Sm8bzjdzr8dv2rozl5JVIJofIEGEHw4naVPm55MU=";
         env.CGO_ENABLED = 0;
         inherit ldflags;
         # tests run separately via checks.tests (they need git)
