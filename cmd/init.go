@@ -304,140 +304,123 @@ func initStepObsidian(store *storage.Store, registered []sources.Config) (int, e
 		return 0, nil
 	}
 
-	defaultVaultDir := filepath.Join(home, "Documents", "Notes")
-	if env := os.Getenv("OBSIDIAN_VAULT"); env != "" {
-		defaultVaultDir = env
-	}
-
 	if !initYes {
 		fmt.Println("-- Obsidian vault " + strings.Repeat("-", 56))
 		fmt.Println()
 	}
 
-	vaultDir := defaultVaultDir
-
-	if !initYes {
-		defaultDisplay := initShortenHome(defaultVaultDir, home)
-		_, _ = fmt.Fprintf(os.Stdout, "Where is your Obsidian vault? [%s]: ", defaultDisplay)
-		input := strings.TrimSpace(readLine())
-		if input != "" {
-			vaultDir = initExpandHome(input, home)
-		}
+	// Auto-detect: check known candidate paths for .obsidian/
+	candidates := []string{
+		filepath.Join(home, "Documents", "Notes"),
+		filepath.Join(home, "Obsidian"),
+		filepath.Join(home, "obsidian"),
+	}
+	if env := os.Getenv("OBSIDIAN_VAULT"); env != "" {
+		candidates = append([]string{env}, candidates...)
 	}
 
-	if _, statErr := os.Stat(vaultDir); statErr != nil {
-		if initYes {
-			_, _ = fmt.Fprintf(os.Stdout, "No Obsidian vault found at %s.\n", initShortenHome(vaultDir, home))
-		} else {
-			fmt.Printf("No vault found at %s.\n\n", initShortenHome(vaultDir, home))
-		}
-		return 0, nil
-	}
-
-	vaults := initFindObsidianVaults(vaultDir)
-
-	var newVaults []string
-	alreadyReg := 0
-	for _, v := range vaults {
-		if initIsHomeDir(v) {
+	seen := make(map[string]bool)
+	var detected []string
+	for _, c := range candidates {
+		abs, absErr := filepath.Abs(c)
+		if absErr != nil || seen[abs] {
 			continue
 		}
+		seen[abs] = true
+		if initDirExists(filepath.Join(abs, ".obsidian")) {
+			detected = append(detected, abs)
+		}
+	}
+
+	added := 0
+
+	// Offer auto-detected vaults
+	for _, v := range detected {
 		if initIsRegistered(registered, "obsidian", v) {
-			alreadyReg++
-		} else {
-			newVaults = append(newVaults, v)
+			if !initYes {
+				fmt.Printf("Found Obsidian vault at %s -- already registered. Skipping.\n\n", initShortenHome(v, home))
+			}
+			continue
 		}
-	}
-
-	displayDir := initShortenHome(vaultDir, home)
-
-	if len(newVaults) == 0 && alreadyReg == 0 {
 		if initYes {
-			_, _ = fmt.Fprintf(os.Stdout, "No Obsidian vault found at %s.\n", displayDir)
-		} else {
-			fmt.Printf("No vault found at %s.\n\n", displayDir)
-		}
-		return 0, nil
-	}
-
-	if len(newVaults) == 0 {
-		if !initYes {
-			fmt.Println("Already registered. Skipping.")
-			fmt.Println()
-		}
-		return 0, nil
-	}
-
-	if initYes {
-		for _, v := range newVaults {
 			_, _ = fmt.Fprintf(os.Stdout, "Found Obsidian vault at %s.\n", initShortenHome(v, home))
 			if err := initAddSource(store, "obsidian", v); err != nil {
-				return 0, err
+				return added, err
 			}
-		}
-		return len(newVaults), nil
-	}
-
-	// Interactive: show found vaults
-	regSuffix := ""
-	if alreadyReg > 0 {
-		regSuffix = fmt.Sprintf(" (%d already registered)", alreadyReg)
-	}
-	total := len(newVaults) + alreadyReg
-	if total == 1 {
-		fmt.Printf("Found Obsidian vault at %s%s.\n", initShortenHome(newVaults[0], home), regSuffix)
-	} else {
-		fmt.Printf("Found %d Obsidian vaults%s:\n\n", total, regSuffix)
-		for _, v := range newVaults {
-			fmt.Printf("  %s\n", initShortenHome(v, home))
-		}
-	}
-
-	_, _ = fmt.Fprintf(os.Stdout, "Add? [Y/n]: ")
-	answer := strings.ToLower(strings.TrimSpace(readLine()))
-	if answer != "" && answer != "y" && answer != "yes" {
-		fmt.Println()
-		return 0, nil
-	}
-
-	for _, v := range newVaults {
-		if err := initAddSource(store, "obsidian", v); err != nil {
-			return 0, err
-		}
-	}
-	if len(newVaults) == 1 {
-		fmt.Println("Added Obsidian vault.")
-	} else {
-		fmt.Printf("Added %d Obsidian vaults.\n", len(newVaults))
-	}
-	fmt.Println()
-	return len(newVaults), nil
-}
-
-// initFindObsidianVaults finds Obsidian vaults at dir or among its direct children.
-// Returns the vault root paths (directories that contain .obsidian/).
-func initFindObsidianVaults(dir string) []string {
-	// The path itself is a vault
-	if initDirExists(filepath.Join(dir, ".obsidian")) {
-		return []string{dir}
-	}
-
-	// Scan direct children for vaults
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil
-	}
-	var vaults []string
-	for _, e := range entries {
-		if !e.IsDir() {
+			added++
 			continue
 		}
-		child := filepath.Join(dir, e.Name())
-		if initDirExists(filepath.Join(child, ".obsidian")) {
-			vaults = append(vaults, child)
+		fmt.Printf("Found Obsidian vault at %s.\n", initShortenHome(v, home))
+		_, _ = fmt.Fprintf(os.Stdout, "Add? [Y/n]: ")
+		answer := strings.ToLower(strings.TrimSpace(readLine()))
+		if answer == "" || answer == "y" || answer == "yes" {
+			if err := initAddSource(store, "obsidian", v); err != nil {
+				return added, err
+			}
+			fmt.Println("Added Obsidian vault.")
+			added++
 		}
+		fmt.Println()
 	}
-	return vaults
+
+	if !initYes {
+		// If nothing was auto-detected, offer a single manual entry.
+		// If something was found, loop with "Add another vault?" for extra vaults.
+		if len(detected) == 0 {
+			if added == 0 {
+				fmt.Println("No Obsidian vaults found.")
+			}
+			_, _ = fmt.Fprintf(os.Stdout, "Enter path to a vault (or leave empty to skip): ")
+			n, addErr := initObsidianAddManual(store, registered, home)
+			added += n
+			if addErr != nil {
+				return added, addErr
+			}
+		} else {
+			for {
+				_, _ = fmt.Fprintf(os.Stdout, "Add another vault? [y/N]: ")
+				answer := strings.ToLower(strings.TrimSpace(readLine()))
+				if answer != "y" && answer != "yes" {
+					break
+				}
+				_, _ = fmt.Fprintf(os.Stdout, "Path: ")
+				n, addErr := initObsidianAddManual(store, registered, home)
+				added += n
+				if addErr != nil {
+					return added, addErr
+				}
+			}
+		}
+		fmt.Println()
+	}
+
+	return added, nil
+}
+
+// initObsidianAddManual reads a vault path from stdin and adds it if valid.
+// The caller is responsible for printing the prompt before calling this.
+func initObsidianAddManual(store *storage.Store, registered []sources.Config, home string) (int, error) {
+	input := strings.TrimSpace(readLine())
+	if input == "" {
+		return 0, nil
+	}
+	vaultPath := initExpandHome(input, home)
+	switch {
+	case initIsHomeDir(vaultPath):
+		fmt.Println("Home directory cannot be added as a source.")
+		return 0, nil
+	case !initDirExists(filepath.Join(vaultPath, ".obsidian")):
+		fmt.Printf("No .obsidian/ found at %s.\n", vaultPath)
+		return 0, nil
+	case initIsRegistered(registered, "obsidian", vaultPath):
+		fmt.Println("Already registered.")
+		return 0, nil
+	}
+	if err := initAddSource(store, "obsidian", vaultPath); err != nil {
+		return 0, err
+	}
+	fmt.Println("Added Obsidian vault.")
+	return 1, nil
 }
 
 func initStepMarkdown(store *storage.Store, registered []sources.Config) (int, error) {
