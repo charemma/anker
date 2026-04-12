@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charemma/anker/internal/sources"
 	"github.com/charemma/anker/internal/sources/claude"
@@ -27,4 +28,15 @@ func createSource(cfg sources.Config) (sources.Source, error) {
 	default:
 		return nil, fmt.Errorf("unsupported source type: %s", cfg.Type)
 	}
+}
+
+func splitTrimmed(s, sep string) []string {
+	var parts []string
+	for part := range strings.SplitSeq(s, sep) {
+		trimmed := strings.TrimSpace(part)
+		if trimmed != "" {
+			parts = append(parts, trimmed)
+		}
+	}
+	return parts
 }
