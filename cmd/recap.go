@@ -108,13 +108,15 @@ Examples:
 
 		// Default: AI summary
 		if !isAIConfigured(cfg) {
-			_, _ = fmt.Fprintln(os.Stdout, ui.StyleNormal.Render("No AI backend configured. anker needs AI to produce readable reports."))
+			_, _ = fmt.Fprintln(os.Stdout, ui.StyleNormal.Render("anker needs an AI backend to generate readable reports."))
 			_, _ = fmt.Fprintln(os.Stdout)
-			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render("Setup options:"))
+			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render("Quick setup:"))
 			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render(`  anker config set ai_backend cli`))
 			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render(`  anker config set ai_cli_command "claude -p"`))
 			_, _ = fmt.Fprintln(os.Stdout)
-			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render("Or use --raw for unformatted data."))
+			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render("Or run: anker init"))
+			_, _ = fmt.Fprintln(os.Stdout)
+			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render("For raw data without AI: anker recap --raw"))
 			return nil
 		}
 
