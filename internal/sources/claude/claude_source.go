@@ -7,11 +7,16 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/charemma/anker/internal/sources"
+	"github.com/charemma/anker/internal/sources/aisession"
 )
+
+const maxContentPromptLength = 500
 
 // ClaudeSource implements the Source interface for Claude Code session data.
 // It scans all project directories under <claudeHome>/projects/ for JSONL session files.
@@ -46,6 +51,77 @@ type contentBlock struct {
 	Text string `json:"text"`
 }
 
+// toolUseBlock represents a tool_use content block from an assistant message.
+type toolUseBlock struct {
+	Type  string          `json:"type"`
+	Name  string          `json:"name"`
+	Input json.RawMessage `json:"input"`
+}
+
+// toolInput captures file_path from tool inputs for files_touched tracking.
+type toolInput struct {
+	FilePath string `json:"file_path"`
+}
+
+// sessionData is the internal accumulator for building a session summary.
+type sessionData struct {
+	id          string
+	slug        string
+	firstPrompt string
+	userTurns   int
+	model       string
+	cwd         string
+	gitBranch   string
+	startTime   time.Time
+	endTime     time.Time
+	toolSet     map[string]bool
+	fileSet     map[string]bool
+	projectDir  string
+}
+
+func newSessionData(id, projectDir string) *sessionData {
+	return &sessionData{
+		id:         id,
+		projectDir: projectDir,
+		toolSet:    make(map[string]bool),
+		fileSet:    make(map[string]bool),
+	}
+}
+
+func (s *sessionData) trackTimestamp(ts time.Time) {
+	if s.startTime.IsZero() || ts.Before(s.startTime) {
+		s.startTime = ts
+	}
+	if ts.After(s.endTime) {
+		s.endTime = ts
+	}
+}
+
+func (s *sessionData) toSummary() aisession.SessionSummary {
+	tools := make([]aisession.ToolInvocation, 0, len(s.toolSet))
+	for name := range s.toolSet {
+		tools = append(tools, aisession.ToolInvocation{Name: name})
+	}
+	sort.Slice(tools, func(i, j int) bool { return tools[i].Name < tools[j].Name })
+
+	// Add file paths to the corresponding tool invocations where possible,
+	// but also produce the flat list via fileSet
+	return aisession.SessionSummary{
+		SessionID:   s.id,
+		Slug:        s.slug,
+		Project:     projectNameFromCWD(s.cwd),
+		ProjectDir:  s.projectDir,
+		FirstPrompt: s.firstPrompt,
+		TurnCount:   s.userTurns,
+		Model:       s.model,
+		CWD:         s.cwd,
+		GitBranch:   s.gitBranch,
+		StartTime:   s.startTime,
+		EndTime:     s.endTime,
+		ToolsUsed:   tools,
+	}
+}
+
 // NewClaudeSource creates a new Claude Code session source.
 // claudeHome is the path to the .claude directory (typically ~/.claude).
 func NewClaudeSource(claudeHome string) *ClaudeSource {
@@ -76,7 +152,6 @@ func (c *ClaudeSource) Validate() error {
 		return fmt.Errorf("projects path is not a directory: %s", projectsDir)
 	}
 
-	// Check for at least one project dir with .jsonl files
 	dirEntries, err := os.ReadDir(projectsDir)
 	if err != nil {
 		return fmt.Errorf("failed to read projects directory: %w", err)
@@ -121,7 +196,7 @@ func (c *ClaudeSource) GetEntries(from, to time.Time) ([]sources.Entry, error) {
 		}
 
 		for _, path := range matches {
-			fileEntries, err := c.parseSessionFile(path, from, to, projectDir)
+			fileEntries, err := c.parseSessions(path, from, to, projectDir)
 			if err != nil {
 				fmt.Fprintf(c.warn, "warning: %s: %v\n", filepath.Base(path), err)
 				continue
@@ -133,7 +208,7 @@ func (c *ClaudeSource) GetEntries(from, to time.Time) ([]sources.Entry, error) {
 	return entries, nil
 }
 
-func (c *ClaudeSource) parseSessionFile(path string, from, to time.Time, project string) ([]sources.Entry, error) {
+func (c *ClaudeSource) parseSessions(path string, from, to time.Time, projectDir string) ([]sources.Entry, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -141,13 +216,12 @@ func (c *ClaudeSource) parseSessionFile(path string, from, to time.Time, project
 	defer func() { _ = f.Close() }()
 
 	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, 0, 64*1024), 10*1024*1024) // 10MB max line size
+	scanner.Buffer(make([]byte, 0, 64*1024), 10*1024*1024)
 
-	var entries []sources.Entry
 	sessionFile := filepath.Base(path)
+	sessions := make(map[string]*sessionData)
 	lineNum := 0
 	parseErrors := 0
-	cwd := "" // populated from the first JSONL line that has it
 
 	for scanner.Scan() {
 		line := scanner.Bytes()
@@ -160,16 +234,8 @@ func (c *ClaudeSource) parseSessionFile(path string, from, to time.Time, project
 			continue
 		}
 
-		// Capture cwd from the first line that has it
-		if cwd == "" && jl.CWD != "" {
-			cwd = jl.CWD
-		}
-
-		if jl.Type != "user" {
-			continue
-		}
-
-		if jl.IsMeta {
+		// Only process user and assistant lines
+		if jl.Type != "user" && jl.Type != "assistant" {
 			continue
 		}
 
@@ -180,8 +246,27 @@ func (c *ClaudeSource) parseSessionFile(path string, from, to time.Time, project
 			continue
 		}
 
-		if ts.Before(from) || ts.After(to) {
-			continue
+		sid := jl.SessionID
+		if sid == "" {
+			sid = sessionFile
+		}
+
+		sess, ok := sessions[sid]
+		if !ok {
+			sess = newSessionData(sid, projectDir)
+			sessions[sid] = sess
+		}
+
+		sess.trackTimestamp(ts)
+
+		if sess.slug == "" && jl.Slug != "" {
+			sess.slug = jl.Slug
+		}
+		if sess.cwd == "" && jl.CWD != "" {
+			sess.cwd = jl.CWD
+		}
+		if sess.gitBranch == "" && jl.GitBranch != "" {
+			sess.gitBranch = jl.GitBranch
 		}
 
 		var msg message
@@ -191,48 +276,131 @@ func (c *ClaudeSource) parseSessionFile(path string, from, to time.Time, project
 			continue
 		}
 
-		if msg.Role != "user" {
-			continue
+		switch jl.Type {
+		case "user":
+			c.processUserLine(sess, &jl, &msg)
+		case "assistant":
+			c.processAssistantLine(sess, &msg)
 		}
-
-		text := extractUserText(msg.Content)
-		if text == "" {
-			continue
-		}
-
-		if isSystemMessage(text) {
-			continue
-		}
-
-		// Prefix with project name derived from cwd
-		projectName := projectNameFromCWD(cwd)
-		content := fmt.Sprintf("[%s] %s", projectName, text)
-
-		entry := sources.Entry{
-			Timestamp: ts,
-			Source:    "claude",
-			Location:  c.claudeHome,
-			Content:   content,
-			Metadata: map[string]string{
-				"project":      project,
-				"session_file": sessionFile,
-			},
-		}
-		if jl.SessionID != "" {
-			entry.Metadata["session_id"] = jl.SessionID
-		}
-		if jl.Slug != "" {
-			entry.Metadata["slug"] = jl.Slug
-		}
-
-		entries = append(entries, entry)
 	}
 
-	if parseErrors > 0 && len(entries) == 0 {
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	if parseErrors > 0 && len(sessions) == 0 {
 		fmt.Fprintf(c.warn, "warning: %s: all %d parsed lines failed, file may be corrupted or incompatible\n", sessionFile, parseErrors)
 	}
 
-	return entries, scanner.Err()
+	// Convert sessions to entries, filtering by time range (start time in [from, to])
+	var entries []sources.Entry
+	for _, sess := range sessions {
+		if sess.startTime.Before(from) || sess.startTime.After(to) {
+			continue
+		}
+		if sess.userTurns == 0 {
+			continue
+		}
+		summary := sess.toSummary()
+		entries = append(entries, summaryToEntry(summary, sessionFile, c.claudeHome))
+	}
+
+	return entries, nil
+}
+
+func (c *ClaudeSource) processUserLine(sess *sessionData, jl *jsonlLine, msg *message) {
+	if jl.IsMeta {
+		return
+	}
+
+	text := extractUserText(msg.Content)
+	if text == "" {
+		return
+	}
+
+	if isSystemMessage(text) {
+		return
+	}
+
+	sess.userTurns++
+
+	// Capture first prompt, skipping slash commands
+	if sess.firstPrompt == "" && !strings.HasPrefix(text, "/") {
+		sess.firstPrompt = text
+	}
+}
+
+func (c *ClaudeSource) processAssistantLine(sess *sessionData, msg *message) {
+	// Capture model from the first assistant message
+	if sess.model == "" && msg.Model != "" {
+		sess.model = msg.Model
+	}
+
+	// Extract tool_use blocks
+	invocations := extractToolUses(msg.Content)
+	for _, inv := range invocations {
+		sess.toolSet[inv.Name] = true
+		if inv.Path != "" {
+			sess.fileSet[inv.Path] = true
+		}
+	}
+}
+
+func summaryToEntry(s aisession.SessionSummary, sessionFile, claudeHome string) sources.Entry {
+	// Build content: [project] prompt -- N turns, M min
+	prompt := s.FirstPrompt
+	truncated := false
+	if len(prompt) > maxContentPromptLength {
+		prompt = prompt[:maxContentPromptLength]
+		truncated = true
+	}
+
+	var content string
+	if truncated {
+		content = fmt.Sprintf("[%s] %s... -- %d turns, %d min", s.Project, prompt, s.TurnCount, s.DurationMinutes())
+	} else {
+		content = fmt.Sprintf("[%s] %s -- %d turns, %d min", s.Project, prompt, s.TurnCount, s.DurationMinutes())
+	}
+
+	meta := map[string]string{
+		"project":      s.ProjectDir,
+		"session_file": sessionFile,
+	}
+
+	setIfNotEmpty(meta, "session_id", s.SessionID)
+	setIfNotEmpty(meta, "slug", s.Slug)
+	setIfNotEmpty(meta, "project_name", s.Project)
+	setIfNotEmpty(meta, "cwd", s.CWD)
+	setIfNotEmpty(meta, "git_branch", s.GitBranch)
+	setIfNotEmpty(meta, "model", s.Model)
+	setIfNotEmpty(meta, "first_prompt", s.FirstPrompt)
+
+	if s.TurnCount > 0 {
+		meta["turn_count"] = strconv.Itoa(s.TurnCount)
+	}
+	meta["duration_minutes"] = strconv.Itoa(s.DurationMinutes())
+
+	if len(s.ToolsUsed) > 0 {
+		names := make([]string, len(s.ToolsUsed))
+		for i, t := range s.ToolsUsed {
+			names[i] = t.Name
+		}
+		meta["tools_used"] = strings.Join(names, ",")
+	}
+
+	return sources.Entry{
+		Timestamp: s.StartTime,
+		Source:    "claude",
+		Location:  claudeHome,
+		Content:   content,
+		Metadata:  meta,
+	}
+}
+
+func setIfNotEmpty(m map[string]string, key, value string) {
+	if value != "" {
+		m[key] = value
+	}
 }
 
 // extractUserText extracts the text content from a message's content field.
@@ -255,6 +423,28 @@ func extractUserText(raw json.RawMessage) string {
 		}
 	}
 	return strings.Join(parts, " ")
+}
+
+// extractToolUses parses tool_use blocks from an assistant message's content.
+func extractToolUses(raw json.RawMessage) []aisession.ToolInvocation {
+	var blocks []toolUseBlock
+	if err := json.Unmarshal(raw, &blocks); err != nil {
+		return nil
+	}
+
+	var invocations []aisession.ToolInvocation
+	for _, block := range blocks {
+		if block.Type != "tool_use" || block.Name == "" {
+			continue
+		}
+		inv := aisession.ToolInvocation{Name: block.Name}
+		var ti toolInput
+		if err := json.Unmarshal(block.Input, &ti); err == nil && ti.FilePath != "" {
+			inv.Path = ti.FilePath
+		}
+		invocations = append(invocations, inv)
+	}
+	return invocations
 }
 
 // projectNameFromCWD extracts a human-readable project name from the working
