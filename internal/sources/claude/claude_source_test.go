@@ -157,11 +157,11 @@ func TestClaudeSource_GetEntries_SkipsMetaMessages(t *testing.T) {
 	}
 }
 
-func TestClaudeSource_GetEntries_TruncatesLongContent(t *testing.T) {
+func TestClaudeSource_GetEntries_PreservesFullContent(t *testing.T) {
 	claudeHome := setupTestClaudeHome(t, "project1")
 	now := time.Now().UTC()
 
-	longText := strings.Repeat("x", 300)
+	longText := strings.Repeat("x", 500)
 
 	sessionFile := filepath.Join(claudeHome, "projects", "project1", "session1.jsonl")
 	appendSessionLine(t, sessionFile, userLine(longText, now, false))
@@ -176,10 +176,9 @@ func TestClaudeSource_GetEntries_TruncatesLongContent(t *testing.T) {
 		t.Fatalf("expected 1 entry, got %d", len(entries))
 	}
 
-	// "[project1] " (11) + 200 chars + "..." (3) = 214
-	expected := len("[project1] ") + maxContentLength + len("...")
-	if len(entries[0].Content) != expected {
-		t.Errorf("expected content length %d, got %d", expected, len(entries[0].Content))
+	expected := "[project1] " + longText
+	if entries[0].Content != expected {
+		t.Errorf("expected full content preserved (len %d), got len %d", len(expected), len(entries[0].Content))
 	}
 }
 

@@ -13,8 +13,6 @@ import (
 	"github.com/charemma/anker/internal/sources"
 )
 
-const maxContentLength = 200
-
 // ClaudeSource implements the Source interface for Claude Code session data.
 // It scans all project directories under <claudeHome>/projects/ for JSONL session files.
 type ClaudeSource struct {
@@ -198,10 +196,6 @@ func (c *ClaudeSource) parseSessionFile(path string, from, to time.Time, project
 
 		if isSystemMessage(text) {
 			continue
-		}
-
-		if len(text) > maxContentLength {
-			text = text[:maxContentLength] + "..."
 		}
 
 		// Prefix with project name for context
