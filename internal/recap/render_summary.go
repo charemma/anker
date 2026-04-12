@@ -289,6 +289,7 @@ func renderToday(w io.Writer, result *RecapResult, plain bool) error {
 
 	_, _ = fmt.Fprintln(w)
 	_, _ = fmt.Fprintln(w, ui.StyleMuted.Render(buildFooter(entries)))
+	_, _ = fmt.Fprintln(w, ui.StyleMuted.Render("For a narrative summary: anker recap today --format ai"))
 	return nil
 }
 
@@ -384,6 +385,7 @@ func renderWeek(w io.Writer, result *RecapResult, plain bool) error {
 
 	_, _ = fmt.Fprintln(w)
 	_, _ = fmt.Fprintln(w, ui.StyleMuted.Render(buildFooter(entries)))
+	_, _ = fmt.Fprintln(w, ui.StyleMuted.Render("For a narrative summary: anker recap "+result.Timespec+" --format ai"))
 	return nil
 }
 

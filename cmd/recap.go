@@ -85,11 +85,11 @@ Examples:
 		}
 
 		if len(sourceConfigs) == 0 {
-			fmt.Println("No sources configured yet.")
-			fmt.Println()
-			fmt.Println("Quick setup options:")
-			fmt.Println("  anker source add        Add the current directory")
-			fmt.Println("  anker source add ~/code Add a directory of repos")
+			_, _ = fmt.Fprintln(os.Stdout, ui.StyleNormal.Render("No sources configured yet."))
+			_, _ = fmt.Fprintln(os.Stdout)
+			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render("Quick setup options:"))
+			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render("  anker source add        Add the current directory"))
+			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render("  anker source add ~/code Add a directory of repos"))
 			return nil
 		}
 
@@ -108,7 +108,7 @@ Examples:
 		}
 
 		if len(result.Entries) == 0 {
-			fmt.Printf("No activity found for %s\n", timespec)
+			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render("No activity found for "+timespec))
 			return nil
 		}
 
