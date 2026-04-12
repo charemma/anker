@@ -98,7 +98,7 @@ Examples:
 		}
 
 		// Collect entries from all sources
-		result, err := recap.BuildRecap(sourceConfigs, tr, timespec, recapFormat, createSource, os.Stderr)
+		result, err := recap.BuildRecap(sourceConfigs, tr, timespec, recap.BuildOptions{EnrichDiffs: recapFormat == "markdown"}, createSource, os.Stderr)
 		if err != nil {
 			return err
 		}
