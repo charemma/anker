@@ -27,12 +27,16 @@ type jsonlLine struct {
 	SessionID string          `json:"sessionId"`
 	Slug      string          `json:"slug"`
 	IsMeta    bool            `json:"isMeta"`
+	CWD       string          `json:"cwd"`
+	GitBranch string          `json:"gitBranch"`
+	Version   string          `json:"version"`
 	Message   json.RawMessage `json:"message"`
 }
 
 // message represents the message field within a JSONL line.
 type message struct {
 	Role    string          `json:"role"`
+	Model   string          `json:"model"`
 	Content json.RawMessage `json:"content"`
 }
 

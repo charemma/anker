@@ -290,12 +290,19 @@ func setupTestClaudeHome(t *testing.T, projectDirs ...string) string {
 
 // userLine creates a JSONL line for a user message with text content blocks.
 func userLine(text string, ts time.Time, isMeta bool) string {
+	return userLineWithOpts(text, ts, isMeta, "test-session-id", "/tmp/test/project", "main")
+}
+
+// userLineWithOpts creates a JSONL user line with explicit session/cwd/branch values.
+func userLineWithOpts(text string, ts time.Time, isMeta bool, sessionID, cwd, branch string) string {
 	line := map[string]any{
 		"type":      "user",
 		"timestamp": ts.Format(time.RFC3339Nano),
-		"sessionId": "test-session-id",
+		"sessionId": sessionID,
 		"slug":      "test-slug",
 		"isMeta":    isMeta,
+		"cwd":       cwd,
+		"gitBranch": branch,
 		"message": map[string]any{
 			"role": "user",
 			"content": []map[string]any{
