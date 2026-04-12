@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,10 +12,9 @@ import (
 	"github.com/charemma/anker/internal/sources"
 	claudesource "github.com/charemma/anker/internal/sources/claude"
 	"github.com/charemma/anker/internal/storage"
+	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 )
-
-const initListThreshold = 8
 
 var initYes bool
 
@@ -114,21 +114,29 @@ func initStepGit(store *storage.Store, registered []sources.Config) (int, error)
 		fmt.Println()
 	}
 
-	codeDir := defaultCodeDir
+	codeDir := initShortenHome(defaultCodeDir, home)
 
 	if !initYes {
-		_, _ = fmt.Fprintf(os.Stdout, "Where do you keep your code? [~/code]: ")
-		input := strings.TrimSpace(readLine())
-		if input != "" {
-			codeDir = initExpandHome(input, home)
+		if err := huh.NewInput().
+			Title("Where do you keep your code?").
+			Value(&codeDir).
+			Run(); initIsAbort(err) {
+			return 0, nil
+		} else if err != nil {
+			return 0, err
+		}
+		if codeDir == "" {
+			codeDir = defaultCodeDir
 		}
 	}
+
+	codeDir = initExpandHome(codeDir, home)
 
 	if _, statErr := os.Stat(codeDir); statErr != nil {
 		if initYes {
 			_, _ = fmt.Fprintf(os.Stdout, "Scanning %s ... directory not found.\n", initShortenHome(codeDir, home))
 		} else {
-			fmt.Printf("Scanning %s ... directory not found.\n\n", initShortenHome(codeDir, home))
+			fmt.Printf("Directory not found: %s\n\n", codeDir)
 			fmt.Println("Add a repository manually later:")
 			fmt.Println("  anker source add git ~/projects/my-repo")
 			fmt.Println()
@@ -136,14 +144,11 @@ func initStepGit(store *storage.Store, registered []sources.Config) (int, error)
 		return 0, nil
 	}
 
-	// Scan all git repos, then split into new vs already registered.
+	fmt.Printf("Scanning %s ...\n", initShortenHome(codeDir, home))
+
 	allDiscovered, discErr := sources.DiscoverSources(codeDir, 2, nil)
 	if discErr != nil {
-		if initYes {
-			_, _ = fmt.Fprintf(os.Stderr, "warning: could not scan %s: %v\n", codeDir, discErr)
-		} else {
-			fmt.Printf("Scanning %s ... error: %v\n\n", initShortenHome(codeDir, home), discErr)
-		}
+		_, _ = fmt.Fprintf(os.Stderr, "warning: could not scan %s: %v\n", codeDir, discErr)
 		return 0, nil
 	}
 
@@ -163,27 +168,24 @@ func initStepGit(store *storage.Store, registered []sources.Config) (int, error)
 	total := len(gitRepos)
 	displayDir := initShortenHome(codeDir, home)
 
-	if total == 0 && alreadyReg == 0 {
-		if initYes {
-			_, _ = fmt.Fprintf(os.Stdout, "Scanning %s ... no git repositories found.\n", displayDir)
-		} else {
-			fmt.Printf("Scanning %s ... no git repositories found.\n\n", displayDir)
-			fmt.Println("Add a repository manually later:")
-			fmt.Printf("  anker source add git %s/my-repo\n", displayDir)
-			fmt.Println()
-		}
-		return 0, nil
-	}
-
 	if total == 0 {
-		if !initYes {
-			fmt.Printf("Scanning %s ... found %d git repositories (%d already registered).\n\n", displayDir, alreadyReg, alreadyReg)
+		if alreadyReg > 0 {
+			fmt.Printf("All %d git repositories in %s already registered.\n\n", alreadyReg, displayDir)
+		} else {
+			if initYes {
+				_, _ = fmt.Fprintf(os.Stdout, "No git repositories found in %s.\n", displayDir)
+			} else {
+				fmt.Printf("No git repositories found in %s.\n\n", displayDir)
+				fmt.Println("Add a repository manually later:")
+				fmt.Printf("  anker source add git %s/my-repo\n", displayDir)
+				fmt.Println()
+			}
 		}
 		return 0, nil
 	}
 
 	if initYes {
-		_, _ = fmt.Fprintf(os.Stdout, "Scanning %s ... found %d git repositories.\n", displayDir, total+alreadyReg)
+		_, _ = fmt.Fprintf(os.Stdout, "Found %d git repositories.\n", total)
 		added := 0
 		for _, r := range gitRepos {
 			if err := initAddGitSource(store, r.Path); err != nil {
@@ -194,50 +196,43 @@ func initStepGit(store *storage.Store, registered []sources.Config) (int, error)
 		return added, nil
 	}
 
-	// Interactive: show summary line
-	regSuffix := ""
-	if alreadyReg > 0 {
-		regSuffix = fmt.Sprintf(" (%d already registered)", alreadyReg)
+	// Build MultiSelect options -- all selected by default.
+	options := make([]huh.Option[string], total)
+	for i, r := range gitRepos {
+		options[i] = huh.NewOption(initShortenHome(r.Path, home), r.Path).Selected(true)
 	}
 
-	if total <= initListThreshold {
-		fmt.Printf("Scanning %s ... found %d git repositories%s:\n\n", displayDir, total+alreadyReg, regSuffix)
-		for _, r := range gitRepos {
-			fmt.Printf("  %s\n", r.Path)
-		}
-	} else {
-		fmt.Printf("Scanning %s ... found %d git repositories%s.\n", displayDir, total+alreadyReg, regSuffix)
+	title := fmt.Sprintf("Select repositories to add (%d found", total)
+	if alreadyReg > 0 {
+		title += fmt.Sprintf(", %d already registered", alreadyReg)
+	}
+	title += ")"
+
+	var selected []string
+	height := min(total+3, 16)
+	if err := huh.NewMultiSelect[string]().
+		Title(title).
+		Options(options...).
+		Height(height).
+		Value(&selected).
+		Run(); initIsAbort(err) {
 		fmt.Println()
-		_, _ = fmt.Fprintf(os.Stdout, "Show list? [y/N]: ")
-		if strings.ToLower(strings.TrimSpace(readLine())) == "y" {
-			fmt.Println()
-			for _, r := range gitRepos {
-				fmt.Printf("  %s\n", r.Path)
-			}
-		}
+		return 0, nil
+	} else if err != nil {
+		return 0, err
 	}
 
 	fmt.Println()
-
-	addLabel := fmt.Sprintf("Add all %d?", total)
-	if alreadyReg > 0 {
-		addLabel = fmt.Sprintf("Add %d new repositories?", total)
-	}
-	_, _ = fmt.Fprintf(os.Stdout, "%s [Y/n]: ", addLabel)
-	answer := strings.ToLower(strings.TrimSpace(readLine()))
-	if answer != "" && answer != "y" && answer != "yes" {
-		fmt.Println()
-		return 0, nil
-	}
-
 	added := 0
-	for _, r := range gitRepos {
-		if err := initAddGitSource(store, r.Path); err != nil {
+	for _, path := range selected {
+		if err := initAddGitSource(store, path); err != nil {
 			return added, err
 		}
 		added++
 	}
-	fmt.Printf("Added %d git repositories.\n\n", added)
+	if added > 0 {
+		fmt.Printf("Added %d git repositories.\n\n", added)
+	}
 	return added, nil
 }
 
@@ -282,11 +277,22 @@ func initStepClaude(store *storage.Store, registered []sources.Config) (int, err
 
 	fmt.Println("-- Claude sessions " + strings.Repeat("-", 55))
 	fmt.Println()
-	fmt.Println("Found Claude Code session log at ~/.claude/projects.")
-	_, _ = fmt.Fprintf(os.Stdout, "Add? [Y/n]: ")
-	answer := strings.ToLower(strings.TrimSpace(readLine()))
-	if answer != "" && answer != "y" && answer != "yes" {
+
+	var confirm bool
+	if err := huh.NewConfirm().
+		Title("Found Claude Code session log at ~/.claude/projects. Add?").
+		Affirmative("Yes").
+		Negative("No").
+		Value(&confirm).
+		Run(); initIsAbort(err) {
 		fmt.Println()
+		return 0, nil
+	} else if err != nil {
+		return 0, err
+	}
+
+	fmt.Println()
+	if !confirm {
 		return 0, nil
 	}
 
@@ -309,7 +315,6 @@ func initStepObsidian(store *storage.Store, registered []sources.Config) (int, e
 		fmt.Println()
 	}
 
-	// Auto-detect: check known candidate paths for .obsidian/
 	candidates := []string{
 		filepath.Join(home, "Documents", "Notes"),
 		filepath.Join(home, "Obsidian"),
@@ -334,7 +339,6 @@ func initStepObsidian(store *storage.Store, registered []sources.Config) (int, e
 
 	added := 0
 
-	// Offer auto-detected vaults
 	for _, v := range detected {
 		if initIsRegistered(registered, "obsidian", v) {
 			if !initYes {
@@ -350,45 +354,63 @@ func initStepObsidian(store *storage.Store, registered []sources.Config) (int, e
 			added++
 			continue
 		}
-		fmt.Printf("Found Obsidian vault at %s.\n", initShortenHome(v, home))
-		_, _ = fmt.Fprintf(os.Stdout, "Add? [Y/n]: ")
-		answer := strings.ToLower(strings.TrimSpace(readLine()))
-		if answer == "" || answer == "y" || answer == "yes" {
+
+		var confirm bool
+		if err := huh.NewConfirm().
+			Title(fmt.Sprintf("Found Obsidian vault at %s. Add?", initShortenHome(v, home))).
+			Affirmative("Yes").
+			Negative("No").
+			Value(&confirm).
+			Run(); initIsAbort(err) {
+			fmt.Println()
+			return added, nil
+		} else if err != nil {
+			return added, err
+		}
+
+		fmt.Println()
+		if confirm {
 			if err := initAddSource(store, "obsidian", v); err != nil {
 				return added, err
 			}
 			fmt.Println("Added Obsidian vault.")
+			fmt.Println()
 			added++
 		}
-		fmt.Println()
 	}
 
 	if !initYes {
 		nothingFound := len(detected) == 0
-
 		if nothingFound {
-			// Nothing auto-detected: offer one manual entry first.
 			fmt.Println("No Obsidian vaults found.")
-			_, _ = fmt.Fprintf(os.Stdout, "Enter path to a vault (or press Enter to skip): ")
-			n, addErr := initObsidianAddManual(store, registered, home)
+			fmt.Println()
+		}
+
+		// Manual entry: one attempt when nothing found, then loop.
+		if nothingFound {
+			n, addErr := initObsidianPromptManual(store, registered, home, "Enter path to a vault (or press Enter to skip)")
 			added += n
 			if addErr != nil {
 				return added, addErr
 			}
 		}
 
-		// Loop "Add another vault?" when there is already context (auto-detected
-		// or manually added at least one). Skip if nothing was found and user
-		// pressed Enter on the first prompt.
+		// "Add another vault?" loop -- only when context exists.
 		if !nothingFound || added > 0 {
 			for {
-				_, _ = fmt.Fprintf(os.Stdout, "Add another vault? [y/N]: ")
-				answer := strings.ToLower(strings.TrimSpace(readLine()))
-				if answer != "y" && answer != "yes" {
+				var addAnother bool
+				if err := huh.NewConfirm().
+					Title("Add another vault?").
+					Affirmative("Yes").
+					Negative("No").
+					Value(&addAnother).
+					Run(); initIsAbort(err) || !addAnother {
 					break
+				} else if err != nil {
+					return added, err
 				}
-				_, _ = fmt.Fprintf(os.Stdout, "Path: ")
-				n, addErr := initObsidianAddManual(store, registered, home)
+
+				n, addErr := initObsidianPromptManual(store, registered, home, "Path to Obsidian vault")
 				added += n
 				if addErr != nil {
 					return added, addErr
@@ -401,29 +423,50 @@ func initStepObsidian(store *storage.Store, registered []sources.Config) (int, e
 	return added, nil
 }
 
-// initObsidianAddManual reads a vault path from stdin and adds it if valid.
-// The caller is responsible for printing the prompt before calling this.
-func initObsidianAddManual(store *storage.Store, registered []sources.Config, home string) (int, error) {
-	input := strings.TrimSpace(readLine())
-	if input == "" {
+// initObsidianPromptManual shows an Input for a vault path and adds it if valid.
+func initObsidianPromptManual(store *storage.Store, registered []sources.Config, home, title string) (int, error) {
+	var vaultPath string
+	if err := huh.NewInput().
+		Title(title).
+		Value(&vaultPath).
+		Validate(func(s string) error {
+			if s == "" {
+				return nil
+			}
+			expanded := initExpandHome(s, home)
+			if initIsHomeDir(expanded) {
+				return fmt.Errorf("home directory cannot be added as a source")
+			}
+			if !initDirExists(filepath.Join(expanded, ".obsidian")) {
+				return fmt.Errorf("no .obsidian/ found at %s", s)
+			}
+			return nil
+		}).
+		Run(); initIsAbort(err) {
+		return 0, nil
+	} else if err != nil {
+		return 0, err
+	}
+
+	fmt.Println()
+
+	if vaultPath == "" {
 		return 0, nil
 	}
-	vaultPath := initExpandHome(input, home)
-	switch {
-	case initIsHomeDir(vaultPath):
-		fmt.Println("Home directory cannot be added as a source.")
-		return 0, nil
-	case !initDirExists(filepath.Join(vaultPath, ".obsidian")):
-		fmt.Printf("No .obsidian/ found at %s.\n", vaultPath)
-		return 0, nil
-	case initIsRegistered(registered, "obsidian", vaultPath):
+
+	vaultPath = initExpandHome(vaultPath, home)
+
+	if initIsRegistered(registered, "obsidian", vaultPath) {
 		fmt.Println("Already registered.")
+		fmt.Println()
 		return 0, nil
 	}
+
 	if err := initAddSource(store, "obsidian", vaultPath); err != nil {
 		return 0, err
 	}
 	fmt.Println("Added Obsidian vault.")
+	fmt.Println()
 	return 1, nil
 }
 
@@ -436,40 +479,59 @@ func initStepMarkdown(store *storage.Store, registered []sources.Config) (int, e
 
 	fmt.Println("-- Markdown directories " + strings.Repeat("-", 50))
 	fmt.Println()
-	_, _ = fmt.Fprintf(os.Stdout, "Do you have standalone Markdown directories not inside Git or Obsidian? [y/N]: ")
-	answer := strings.ToLower(strings.TrimSpace(readLine()))
-	if answer != "y" && answer != "yes" {
+
+	var wantMarkdown bool
+	if err := huh.NewConfirm().
+		Title("Do you have standalone Markdown directories not inside Git or Obsidian?").
+		Affirmative("Yes").
+		Negative("No").
+		Value(&wantMarkdown).
+		Run(); initIsAbort(err) || !wantMarkdown {
 		fmt.Println()
 		return 0, nil
+	} else if err != nil {
+		return 0, err
 	}
 
-	_, _ = fmt.Fprintf(os.Stdout, "Path to Markdown directory: ")
-	mdPath := strings.TrimSpace(readLine())
 	fmt.Println()
+
+	var mdPath string
+	if err := huh.NewInput().
+		Title("Path to Markdown directory").
+		Value(&mdPath).
+		Validate(func(s string) error {
+			if s == "" {
+				return nil
+			}
+			expanded := initExpandHome(s, home)
+			if initIsHomeDir(expanded) {
+				return fmt.Errorf("home directory cannot be added as a source")
+			}
+			if _, statErr := os.Stat(expanded); statErr != nil {
+				return fmt.Errorf("directory not found: %s", s)
+			}
+			if !initHasMDFiles(expanded) {
+				return fmt.Errorf("no .md files found in %s", s)
+			}
+			return nil
+		}).
+		Run(); initIsAbort(err) {
+		fmt.Println()
+		return 0, nil
+	} else if err != nil {
+		return 0, err
+	}
+
+	fmt.Println()
+
 	if mdPath == "" {
 		return 0, nil
 	}
 
 	mdPath = initExpandHome(mdPath, home)
 
-	if initIsHomeDir(mdPath) {
-		fmt.Println("Home directory cannot be added as a source. Skipping.")
-		fmt.Println()
-		return 0, nil
-	}
-
-	if _, err := os.Stat(mdPath); err != nil {
-		fmt.Printf("Path %s not found. Skipping.\n\n", mdPath)
-		return 0, nil
-	}
-
-	if !initHasMDFiles(mdPath) {
-		fmt.Printf("No .md files found in %s. Skipping.\n\n", mdPath)
-		return 0, nil
-	}
-
 	if initIsRegistered(registered, "markdown", mdPath) {
-		fmt.Println("Already registered. Skipping.")
+		fmt.Println("Already registered.")
 		fmt.Println()
 		return 0, nil
 	}
@@ -501,17 +563,35 @@ func initStepEmail() {
 		return
 	}
 
-	fmt.Printf("Using %s from your git config.\n", email)
-	_, _ = fmt.Fprintf(os.Stdout, "Change? [y/N]: ")
-	answer := strings.ToLower(strings.TrimSpace(readLine()))
-	if answer == "y" || answer == "yes" {
-		_, _ = fmt.Fprintf(os.Stdout, "New email: ")
-		newEmail := strings.TrimSpace(readLine())
-		if newEmail != "" {
-			fmt.Printf("Note: update your git config with: git config --global user.email %s\n", newEmail)
-		}
+	var change bool
+	if runErr := huh.NewConfirm().
+		Title(fmt.Sprintf("Using %s from your git config. Change?", email)).
+		Affirmative("Yes").
+		Negative("No").
+		Value(&change).
+		Run(); initIsAbort(runErr) || !change {
+		fmt.Println()
+		return
 	}
+
 	fmt.Println()
+
+	var newEmail string
+	if runErr := huh.NewInput().
+		Title("New git author email").
+		Value(&newEmail).
+		Run(); initIsAbort(runErr) || newEmail == "" {
+		fmt.Println()
+		return
+	}
+
+	fmt.Println()
+	fmt.Printf("Note: update your git config with: git config --global user.email %s\n\n", newEmail)
+}
+
+// initIsAbort reports whether err is a user abort (Ctrl+C).
+func initIsAbort(err error) bool {
+	return errors.Is(err, huh.ErrUserAborted)
 }
 
 // initAddGitSource adds a git source with author email from git config.
