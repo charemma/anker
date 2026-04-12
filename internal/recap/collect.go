@@ -23,13 +23,13 @@ func BuildRecap(sourceConfigs []sources.Config, tr *timerange.TimeRange, timespe
 	for _, cfg := range sourceConfigs {
 		source, err := factory(cfg)
 		if err != nil {
-			fmt.Fprintf(warn, "Warning: %v at %s\n", err, cfg.Path)
+			_, _ = fmt.Fprintf(warn, "Warning: %v at %s\n", err, cfg.Path)
 			continue
 		}
 
 		entries, err := source.GetEntries(tr.From, tr.To)
 		if err != nil {
-			fmt.Fprintf(warn, "Warning: failed to get entries from %s %s: %v\n", cfg.Type, cfg.Path, err)
+			_, _ = fmt.Fprintf(warn, "Warning: failed to get entries from %s %s: %v\n", cfg.Type, cfg.Path, err)
 			continue
 		}
 
@@ -37,7 +37,7 @@ func BuildRecap(sourceConfigs []sources.Config, tr *timerange.TimeRange, timespe
 		if format == "markdown" {
 			if gs, ok := source.(*git.GitSource); ok {
 				if err := gs.EnrichWithDiffs(entries); err != nil {
-					fmt.Fprintf(warn, "Warning: failed to enrich diffs for %s: %v\n", gs.Location(), err)
+					_, _ = fmt.Fprintf(warn, "Warning: failed to enrich diffs for %s: %v\n", gs.Location(), err)
 				}
 			}
 		}
