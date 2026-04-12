@@ -5,10 +5,12 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sort"
 
 	"github.com/charemma/anker/internal/ai"
 	"github.com/charemma/anker/internal/config"
 	"github.com/charemma/anker/internal/recap"
+	"github.com/charemma/anker/internal/sources"
 	"github.com/charemma/anker/internal/storage"
 	"github.com/charemma/anker/internal/timerange"
 	"github.com/charemma/anker/internal/ui"
@@ -16,15 +18,16 @@ import (
 )
 
 var (
-	recapFormat string
 	recapPrompt string
 	recapAPIKey string
+	recapRaw    bool
+	recapJSON   bool
 )
 
 var recapCmd = &cobra.Command{
 	Use:   "recap [timespec]",
 	Short: "Recap your work for a time period",
-	Long: `Recap your work from tracked sources - reconstruct what you did after the fact.
+	Long: `Recap your work from tracked sources via AI summary.
 
 Time specifications:
   today            Current day (default)
@@ -37,43 +40,35 @@ Time specifications:
   2025-12-01..31   Date range
   last 7 days      Relative range
 
-Output formats (--format):
-  simple           Chronological summary with source colors (default)
-  detailed         Commit messages with timestamps and stats
-  json             Structured JSON for programmatic use
-  markdown         Markdown with full diffs (for AI/documentation)
-  ai               AI-generated summary via OpenAI-compatible API
+Output modes:
+  (default)        AI-generated summary (requires AI backend)
+  --raw            Unformatted entry dump, one per line -- for pipes, grep
+  --json           Structured JSON
 
 Examples:
   anker recap
   anker recap today
-  anker recap thisweek --format detailed
-  anker recap "December 2025" --format markdown > recap.md
-  anker recap 2025-12-01..2025-12-31
-  anker recap today --format ai
-  anker recap thisweek --plain | grep feat`,
+  anker recap thisweek
+  anker recap lastweek --raw | grep feat
+  anker recap 2025-12-01..2025-12-31 --json`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Default to "today" if no argument provided
 		timespec := "today"
 		if len(args) > 0 {
 			timespec = args[0]
 		}
 
-		// Load configuration
 		cfg, err := config.Load()
 		if err != nil {
 			return fmt.Errorf("failed to load config: %w", err)
 		}
 
-		// Parse time specification
 		parser := timerange.NewParser(cfg.GetTimerangeConfig())
 		tr, err := parser.Parse(timespec)
 		if err != nil {
 			return fmt.Errorf("invalid time specification: %w", err)
 		}
 
-		// Load tracked sources
 		store, err := storage.NewStore()
 		if err != nil {
 			return fmt.Errorf("failed to initialize storage: %w", err)
@@ -93,16 +88,7 @@ Examples:
 			return nil
 		}
 
-		// Validate format
-		validFormats := map[string]bool{"simple": true, "detailed": true, "json": true, "markdown": true, "ai": true}
-		if !validFormats[recapFormat] {
-			return fmt.Errorf("invalid format: %s (must be simple, detailed, json, markdown, or ai)", recapFormat)
-		}
-
-		plain := ui.IsPlain(cmd)
-
-		// Collect entries from all sources
-		result, err := recap.BuildRecap(sourceConfigs, tr, timespec, recap.BuildOptions{EnrichDiffs: recapFormat == "markdown"}, createSource, os.Stderr)
+		result, err := recap.BuildRecap(sourceConfigs, tr, timespec, recap.BuildOptions{EnrichDiffs: false}, createSource, os.Stderr)
 		if err != nil {
 			return err
 		}
@@ -112,37 +98,96 @@ Examples:
 			return nil
 		}
 
-		// AI format uses detailed rendering as input, then transforms via LLM
-		if recapFormat == "ai" {
-			var buf bytes.Buffer
-			if err := recap.RenderDetailed(&buf, result); err != nil {
-				return fmt.Errorf("failed to render recap: %w", err)
-			}
-
-			period := fmt.Sprintf("%s (%s to %s)", timespec, tr.From.Format("2006-01-02"), tr.To.Format("2006-01-02"))
-			return ai.Transform(context.Background(), os.Stdout, buf.String(), period, ai.TransformConfig{
-				AIPrompt:     cfg.AIPrompt,
-				AIBackend:    cfg.AIBackend,
-				AICLICommand: cfg.AICLICommand,
-				AIBaseURL:    cfg.AIBaseURL,
-				AIModel:      cfg.AIModel,
-				AIAPIKey:     cfg.AIAPIKey,
-				EntryCount:   len(result.Entries),
-			}, recapPrompt, recapAPIKey)
+		if recapJSON {
+			return recap.RenderJSON(os.Stdout, result)
 		}
 
-		return recap.Render(os.Stdout, result, recapFormat, plain)
+		if recapRaw {
+			return renderRaw(os.Stdout, result)
+		}
+
+		// Default: AI summary
+		if !isAIConfigured(cfg) {
+			_, _ = fmt.Fprintln(os.Stdout, ui.StyleNormal.Render("No AI backend configured. anker needs AI to produce readable reports."))
+			_, _ = fmt.Fprintln(os.Stdout)
+			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render("Setup options:"))
+			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render(`  anker config set ai_backend cli`))
+			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render(`  anker config set ai_cli_command "claude -p"`))
+			_, _ = fmt.Fprintln(os.Stdout)
+			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render("Or use --raw for unformatted data."))
+			return nil
+		}
+
+		var buf bytes.Buffer
+		if err := recap.RenderForAI(&buf, result); err != nil {
+			return fmt.Errorf("failed to render recap: %w", err)
+		}
+
+		period := fmt.Sprintf("%s (%s to %s)", timespec, tr.From.Format("2006-01-02"), tr.To.Format("2006-01-02"))
+		return ai.Transform(context.Background(), os.Stdout, buf.String(), period, ai.TransformConfig{
+			AIPrompt:     cfg.AIPrompt,
+			AIBackend:    cfg.AIBackend,
+			AICLICommand: cfg.AICLICommand,
+			AIBaseURL:    cfg.AIBaseURL,
+			AIModel:      cfg.AIModel,
+			AIAPIKey:     cfg.AIAPIKey,
+			EntryCount:   len(result.Entries),
+		}, recapPrompt, recapAPIKey)
 	},
+}
+
+// isAIConfigured reports whether the config has a usable AI backend.
+func isAIConfigured(cfg *config.Config) bool {
+	if cfg.AIBackend == "cli" {
+		return cfg.AICLICommand != ""
+	}
+	// api backend: needs an API key (config or env)
+	return cfg.AIAPIKey != "" || os.Getenv("AI_API_KEY") != ""
+}
+
+// renderRaw writes a plain-text entry dump, one line per entry, sorted by timestamp.
+// Format: YYYY-MM-DD <source-label>: <content>
+// Intended for pipes, grep, and debugging.
+func renderRaw(w *os.File, result *recap.RecapResult) error {
+	entries := make([]sources.Entry, len(result.Entries))
+	copy(entries, result.Entries)
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].Timestamp.Before(entries[j].Timestamp)
+	})
+
+	for _, e := range entries {
+		label := rawSourceLabel(e)
+		_, _ = fmt.Fprintf(w, "%s %s: %s\n", e.Timestamp.Format("2006-01-02"), label, e.Content)
+	}
+	_, _ = fmt.Fprintln(w)
+	_, _ = fmt.Fprintf(w, "%d entries (%s to %s)\n",
+		len(entries),
+		result.TimeRange.From.Format("2006-01-02"),
+		result.TimeRange.To.Format("2006-01-02"))
+	return nil
+}
+
+// rawSourceLabel returns "git/<repo>" for git sources and the source type for others.
+func rawSourceLabel(e sources.Entry) string {
+	if e.Source != "git" {
+		return e.Source
+	}
+	name := e.Location
+	if idx := len(name) - 1; idx >= 0 {
+		for i := len(name) - 1; i >= 0; i-- {
+			if name[i] == '/' {
+				name = name[i+1:]
+				break
+			}
+		}
+	}
+	return "git/" + name
 }
 
 func init() {
 	rootCmd.AddCommand(recapCmd)
-	recapCmd.Flags().StringVarP(&recapFormat, "format", "f", "simple", "Output format (simple, detailed, json, markdown, ai)")
-	recapCmd.Flags().StringVar(&recapPrompt, "prompt", "", "Custom prompt for AI summary (--format ai)")
-	recapCmd.Flags().StringVar(&recapAPIKey, "api-key", "", "API key for AI summary (--format ai)")
-	recapCmd.Flags().Bool("plain", false, "No styling, no ANSI -- for pipes, scripts, grep")
-
-	_ = recapCmd.RegisterFlagCompletionFunc("format", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		return []string{"simple", "detailed", "json", "markdown", "ai"}, cobra.ShellCompDirectiveNoFileComp
-	})
+	recapCmd.Flags().StringVar(&recapPrompt, "prompt", "", "Custom prompt for AI summary")
+	recapCmd.Flags().StringVar(&recapAPIKey, "api-key", "", "API key for AI summary")
+	recapCmd.Flags().BoolVar(&recapRaw, "raw", false, "Unformatted entry dump -- for pipes, scripts, grep")
+	recapCmd.Flags().BoolVar(&recapJSON, "json", false, "Structured JSON output")
 }

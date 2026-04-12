@@ -1,11 +1,15 @@
 package ai
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"os"
 	"strings"
+
+	"github.com/charmbracelet/glamour"
+	"github.com/mattn/go-isatty"
 )
 
 // defaultPrompt is a structured template that produces a consistent summary format.
@@ -42,8 +46,8 @@ type TransformConfig struct {
 // Transform sends rendered recap text through an AI backend for summarization.
 // It resolves the prompt (promptOverride > config > default) and API key
 // (apiKeyOverride > AI_API_KEY env > config), then dispatches to CLI or API.
-// Status messages (e.g. "Generating summary...") are written to stderr so they
-// disappear when stdout is piped.
+// The AI response is buffered and glamour-rendered when stdout is a terminal.
+// Status messages are written to stderr so they disappear when stdout is piped.
 func Transform(ctx context.Context, w io.Writer, renderedText string, period string, cfg TransformConfig, promptOverride, apiKeyOverride string) error {
 	// Resolve prompt: override > config > default
 	prompt := defaultPrompt
@@ -60,14 +64,12 @@ func Transform(ctx context.Context, w io.Writer, renderedText string, period str
 	// Status line goes to stderr -- invisible when piped
 	_, _ = fmt.Fprintln(os.Stderr, "\nGenerating summary...")
 
-	sep := strings.Repeat("─", 65)
-	_, _ = fmt.Fprintln(w)
-	_, _ = fmt.Fprintln(w, sep)
-	_, _ = fmt.Fprintln(w)
+	// Buffer AI output so we can glamour-render it
+	var aiOut bytes.Buffer
 
 	var err error
 	if cfg.AIBackend == "cli" {
-		err = RunCLI(cfg.AICLICommand, prompt, renderedText, w)
+		err = RunCLI(cfg.AICLICommand, prompt, renderedText, &aiOut)
 	} else {
 		// Resolve API key: override > env > config
 		apiKey := cfg.AIAPIKey
@@ -83,11 +85,28 @@ func Transform(ctx context.Context, w io.Writer, renderedText string, period str
 			APIKey:  apiKey,
 			Model:   cfg.AIModel,
 		}
-		err = client.StreamCompletion(ctx, prompt, renderedText, w)
+		err = client.StreamCompletion(ctx, prompt, renderedText, &aiOut)
 	}
 
 	if err != nil {
 		return err
+	}
+
+	sep := strings.Repeat("─", 65)
+	_, _ = fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w, sep)
+	_, _ = fmt.Fprintln(w)
+
+	aiText := aiOut.String()
+	if isatty.IsTerminal(os.Stdout.Fd()) {
+		rendered, renderErr := glamour.Render(aiText, "auto")
+		if renderErr == nil {
+			_, _ = fmt.Fprint(w, rendered)
+		} else {
+			_, _ = fmt.Fprint(w, aiText)
+		}
+	} else {
+		_, _ = fmt.Fprint(w, aiText)
 	}
 
 	_, _ = fmt.Fprintln(w, sep)

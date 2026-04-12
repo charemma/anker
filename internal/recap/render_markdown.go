@@ -10,6 +10,12 @@ import (
 	"github.com/mattn/go-isatty"
 )
 
+// RenderForAI writes a markdown representation of the recap suitable as AI input.
+// No glamour rendering -- the output is plain markdown text.
+func RenderForAI(w io.Writer, result *RecapResult) error {
+	return renderMarkdownRaw(w, result)
+}
+
 // RenderMarkdown writes a full markdown recap with diffs.
 // When stdout is a terminal the output is rendered via glamour for readability.
 func RenderMarkdown(w io.Writer, result *RecapResult) error {
