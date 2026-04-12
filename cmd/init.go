@@ -364,19 +364,23 @@ func initStepObsidian(store *storage.Store, registered []sources.Config) (int, e
 	}
 
 	if !initYes {
-		// If nothing was auto-detected, offer a single manual entry.
-		// If something was found, loop with "Add another vault?" for extra vaults.
-		if len(detected) == 0 {
-			if added == 0 {
-				fmt.Println("No Obsidian vaults found.")
-			}
-			_, _ = fmt.Fprintf(os.Stdout, "Enter path to a vault (or leave empty to skip): ")
+		nothingFound := len(detected) == 0
+
+		if nothingFound {
+			// Nothing auto-detected: offer one manual entry first.
+			fmt.Println("No Obsidian vaults found.")
+			_, _ = fmt.Fprintf(os.Stdout, "Enter path to a vault (or press Enter to skip): ")
 			n, addErr := initObsidianAddManual(store, registered, home)
 			added += n
 			if addErr != nil {
 				return added, addErr
 			}
-		} else {
+		}
+
+		// Loop "Add another vault?" when there is already context (auto-detected
+		// or manually added at least one). Skip if nothing was found and user
+		// pressed Enter on the first prompt.
+		if !nothingFound || added > 0 {
 			for {
 				_, _ = fmt.Fprintf(os.Stdout, "Add another vault? [y/N]: ")
 				answer := strings.ToLower(strings.TrimSpace(readLine()))
