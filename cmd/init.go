@@ -13,16 +13,7 @@ import (
 	claudesource "github.com/charemma/anker/internal/sources/claude"
 	"github.com/charemma/anker/internal/storage"
 	"github.com/charmbracelet/huh"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
-)
-
-// Styles used by the init wizard.
-var (
-	initStyleHeader = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("6"))
-	initStyleCheck  = lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
-	initStyleMuted  = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
-	initStyleBold   = lipgloss.NewStyle().Bold(true)
 )
 
 // initCounts tracks how many sources were added per type.
@@ -90,7 +81,7 @@ Examples:
 		}
 
 		if !initYes {
-			fmt.Println(initStyleBold.Render("Welcome to anker. Let's find your sources."))
+			fmt.Println(styleBold.Render("Welcome to anker. Let's find your sources."))
 			fmt.Println("This wizard adds the data sources anker reads for your recap.")
 			fmt.Println()
 		}
@@ -129,11 +120,11 @@ Examples:
 		fmt.Println()
 
 		if counts.total() > 0 {
-			fmt.Println(initStyleBold.Render("Done. Added " + counts.summary() + "."))
+			fmt.Println(styleBold.Render("Done. Added " + counts.summary() + "."))
 			fmt.Println()
 			fmt.Println("Try: anker recap thisweek")
 		} else {
-			fmt.Println(initStyleBold.Render("Done. Nothing new to add."))
+			fmt.Println(styleBold.Render("Done. Nothing new to add."))
 			fmt.Println()
 			fmt.Println("Run: anker recap thisweek")
 		}
@@ -200,7 +191,7 @@ func initStepGit(store *storage.Store, registered []sources.Config) (int, error)
 	if _, statErr := os.Stat(codeDir); statErr != nil {
 		fmt.Println()
 		fmt.Printf("Directory not found: %s\n", codeDir)
-		fmt.Println(initStyleMuted.Render("Add a repository manually: anker source add git ~/path/to/repo"))
+		fmt.Println(styleMuted.Render("Add a repository manually: anker source add git ~/path/to/repo"))
 		fmt.Println()
 		return 0, nil
 	}
@@ -232,12 +223,12 @@ func initStepGit(store *storage.Store, registered []sources.Config) (int, error)
 
 	if total == 0 {
 		if alreadyReg > 0 {
-			fmt.Println(initStyleMuted.Render(
+			fmt.Println(styleMuted.Render(
 				fmt.Sprintf("All %d %s in %s already registered.",
 					alreadyReg, initPlural(alreadyReg, "repo", "repos"), displayDir)))
 		} else {
 			fmt.Printf("No git repositories found in %s.\n", displayDir)
-			fmt.Println(initStyleMuted.Render("Add a repository manually: anker source add git ~/path/to/repo"))
+			fmt.Println(styleMuted.Render("Add a repository manually: anker source add git ~/path/to/repo"))
 		}
 		fmt.Println()
 		return 0, nil
@@ -279,7 +270,7 @@ func initStepGit(store *storage.Store, registered []sources.Config) (int, error)
 		added++
 	}
 	if added > 0 {
-		fmt.Println(initStyleCheck.Render(
+		fmt.Println(styleSuccess.Render(
 			fmt.Sprintf("✓ Added %d git %s", added, initPlural(added, "repository", "repositories"))))
 		fmt.Println()
 	}
@@ -365,7 +356,7 @@ func initStepClaude(store *storage.Store, registered []sources.Config) (int, err
 	if err := initAddSource(store, "claude", claudePath); err != nil {
 		return 0, err
 	}
-	fmt.Println(initStyleCheck.Render("✓ Added Claude sessions"))
+	fmt.Println(styleSuccess.Render("✓ Added Claude sessions"))
 	fmt.Println()
 	return 1, nil
 }
@@ -439,7 +430,7 @@ func initStepObsidian(store *storage.Store, registered []sources.Config) (int, e
 
 	for _, v := range detected {
 		if initIsRegistered(registered, "obsidian", v) {
-			fmt.Println(initStyleMuted.Render(
+			fmt.Println(styleMuted.Render(
 				fmt.Sprintf("  %s already registered, skipping.", initShortenHome(v, home))))
 			continue
 		}
@@ -459,7 +450,7 @@ func initStepObsidian(store *storage.Store, registered []sources.Config) (int, e
 			if err := initAddSource(store, "obsidian", v); err != nil {
 				return added, err
 			}
-			fmt.Println(initStyleCheck.Render("✓ Added Obsidian vault: " + initShortenHome(v, home)))
+			fmt.Println(styleSuccess.Render("✓ Added Obsidian vault: " + initShortenHome(v, home)))
 			fmt.Println()
 			added++
 		}
@@ -533,7 +524,7 @@ func initObsidianPromptManual(store *storage.Store, registered []sources.Config,
 	vaultPath = initExpandHome(vaultPath, home)
 
 	if initIsRegistered(registered, "obsidian", vaultPath) {
-		fmt.Println(initStyleMuted.Render("Already registered."))
+		fmt.Println(styleMuted.Render("Already registered."))
 		fmt.Println()
 		return 0, nil
 	}
@@ -541,7 +532,7 @@ func initObsidianPromptManual(store *storage.Store, registered []sources.Config,
 	if err := initAddSource(store, "obsidian", vaultPath); err != nil {
 		return 0, err
 	}
-	fmt.Println(initStyleCheck.Render("✓ Added Obsidian vault: " + initShortenHome(vaultPath, home)))
+	fmt.Println(styleSuccess.Render("✓ Added Obsidian vault: " + initShortenHome(vaultPath, home)))
 	fmt.Println()
 	return 1, nil
 }
@@ -621,7 +612,7 @@ func initStepMarkdown(store *storage.Store, registered []sources.Config) (int, e
 	mdPath = initExpandHome(mdPath, home)
 
 	if initIsRegistered(registered, "markdown", mdPath) {
-		fmt.Println(initStyleMuted.Render("Already registered."))
+		fmt.Println(styleMuted.Render("Already registered."))
 		fmt.Println()
 		return 0, nil
 	}
@@ -629,7 +620,7 @@ func initStepMarkdown(store *storage.Store, registered []sources.Config) (int, e
 	if err := initAddSource(store, "markdown", mdPath); err != nil {
 		return 0, err
 	}
-	fmt.Println(initStyleCheck.Render("✓ Added Markdown directory: " + initShortenHome(mdPath, home)))
+	fmt.Println(styleSuccess.Render("✓ Added Markdown directory: " + initShortenHome(mdPath, home)))
 	fmt.Println()
 	return 1, nil
 }
@@ -663,22 +654,22 @@ func initStepEmail() {
 	}
 
 	fmt.Println()
-	fmt.Println(initStyleMuted.Render(
+	fmt.Println(styleMuted.Render(
 		fmt.Sprintf("Note: update your git config with: git config --global user.email %s", newEmail)))
 	fmt.Println()
 }
 
 // initCheckLine prints a compact "✓ label   detail" line for already-configured steps.
 func initCheckLine(label, detail string) {
-	check := initStyleCheck.Render("✓")
-	lbl := initStyleBold.Render(fmt.Sprintf("%-22s", label))
-	det := initStyleMuted.Render(detail)
+	check := styleSuccess.Render("✓")
+	lbl := styleBold.Render(fmt.Sprintf("%-22s", label))
+	det := styleMuted.Render(detail)
 	fmt.Printf("%s %s%s\n", check, lbl, det)
 }
 
 // initSectionHeader prints a styled section header for interactive steps.
 func initSectionHeader(title string) {
-	fmt.Println(initStyleHeader.Render(title))
+	fmt.Println(styleHeader.Render(title))
 	fmt.Println()
 }
 
