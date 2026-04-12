@@ -9,6 +9,8 @@ import (
 	"github.com/charemma/anker/internal/sources"
 	claudesource "github.com/charemma/anker/internal/sources/claude"
 	"github.com/charemma/anker/internal/storage"
+	"github.com/charemma/anker/internal/ui"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 )
 
@@ -87,11 +89,11 @@ Examples:
 					// Final fallback: git config --global user.email
 					if email, err := git.GetAuthorEmail(); err == nil && email != "" {
 						srcCfg.Metadata["author"] = email
-						fmt.Printf("using git user.email: %s\n", email)
+						_, _ = fmt.Printf("using git user.email: %s\n", email)
 					} else {
-						fmt.Println("warning: no author email configured - will track ALL commits in this repo")
-						fmt.Println("  set author with: --author your@email.com")
-						fmt.Println("  or configure git: git config --global user.email your@email.com")
+						_, _ = fmt.Println(ui.StyleMuted.Render("warning: no author email configured - will track ALL commits in this repo"))
+						_, _ = fmt.Println(ui.StyleMuted.Render("  set author with: --author your@email.com"))
+						_, _ = fmt.Println(ui.StyleMuted.Render("  or configure git: git config --global user.email your@email.com"))
 					}
 				}
 			}
@@ -117,7 +119,11 @@ Examples:
 			return fmt.Errorf("failed to add source: %w", err)
 		}
 
-		fmt.Printf("added %s source: %s\n", sourceType, path)
+		typeStyled := lipgloss.NewStyle().Foreground(ui.SourceColor(sourceType)).Render(sourceType)
+		_, _ = fmt.Printf("%s %s source: %s\n",
+			ui.StyleSuccess.Render("added"),
+			typeStyled,
+			srcCfg.Path)
 		return nil
 	},
 }
@@ -137,15 +143,16 @@ var sourceListCmd = &cobra.Command{
 		}
 
 		if len(configs) == 0 {
-			fmt.Println("no sources configured")
+			_, _ = fmt.Println(ui.StyleMuted.Render("no sources configured"))
 			return nil
 		}
 
-		for _, config := range configs {
-			fmt.Printf("%s: %s\n", config.Type, config.Path)
-			if len(config.Metadata) > 0 {
-				for k, v := range config.Metadata {
-					fmt.Printf("  %s: %s\n", k, v)
+		for _, cfg := range configs {
+			typeStyled := lipgloss.NewStyle().Foreground(ui.SourceColor(cfg.Type)).Render(cfg.Type)
+			_, _ = fmt.Printf("%s  %s\n", typeStyled, cfg.Path)
+			if len(cfg.Metadata) > 0 {
+				for k, v := range cfg.Metadata {
+					_, _ = fmt.Printf("  %s\n", ui.StyleMuted.Render(k+": "+v))
 				}
 			}
 		}
@@ -173,7 +180,11 @@ var sourceRemoveCmd = &cobra.Command{
 			if err != nil {
 				return fmt.Errorf("failed to remove source: %w", err)
 			}
-			fmt.Printf("removed %s source: %s\n", removed.Type, removed.Path)
+			typeStyled := lipgloss.NewStyle().Foreground(ui.SourceColor(removed.Type)).Render(removed.Type)
+			_, _ = fmt.Printf("%s %s source: %s\n",
+				ui.StyleSuccess.Render("removed"),
+				typeStyled,
+				removed.Path)
 		} else {
 			// Type and path provided
 			sourceType = args[0]
@@ -181,7 +192,11 @@ var sourceRemoveCmd = &cobra.Command{
 			if err := store.RemoveSource(sourceType, path); err != nil {
 				return fmt.Errorf("failed to remove source: %w", err)
 			}
-			fmt.Printf("removed %s source: %s\n", sourceType, path)
+			typeStyled := lipgloss.NewStyle().Foreground(ui.SourceColor(sourceType)).Render(sourceType)
+			_, _ = fmt.Printf("%s %s source: %s\n",
+				ui.StyleSuccess.Render("removed"),
+				typeStyled,
+				path)
 		}
 
 		return nil

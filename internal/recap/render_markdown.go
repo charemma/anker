@@ -1,12 +1,43 @@
 package recap
 
 import (
+	"bytes"
 	"fmt"
 	"io"
+	"os"
+
+	"github.com/charmbracelet/glamour"
+	"github.com/mattn/go-isatty"
 )
 
+// RenderForAI writes a markdown representation of the recap suitable as AI input.
+// No glamour rendering -- the output is plain markdown text.
+func RenderForAI(w io.Writer, result *RecapResult) error {
+	return renderMarkdownRaw(w, result)
+}
+
 // RenderMarkdown writes a full markdown recap with diffs.
+// When stdout is a terminal the output is rendered via glamour for readability.
 func RenderMarkdown(w io.Writer, result *RecapResult) error {
+	var buf bytes.Buffer
+	if err := renderMarkdownRaw(&buf, result); err != nil {
+		return err
+	}
+
+	if isatty.IsTerminal(os.Stdout.Fd()) {
+		rendered, err := glamour.Render(buf.String(), "auto")
+		if err == nil {
+			_, _ = fmt.Fprint(w, rendered)
+			return nil
+		}
+	}
+
+	// Fallback: plain markdown (also used when piped)
+	_, _ = fmt.Fprint(w, buf.String())
+	return nil
+}
+
+func renderMarkdownRaw(w io.Writer, result *RecapResult) error {
 	_, _ = fmt.Fprintf(w, "# Work Recap\n\n")
 	_, _ = fmt.Fprintf(w, "**Period:** %s to %s\n", result.TimeRange.From.Format("2006-01-02"), result.TimeRange.To.Format("2006-01-02"))
 	_, _ = fmt.Fprintf(w, "**Total Activities:** %d\n\n", len(result.Entries))
