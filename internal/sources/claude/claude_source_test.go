@@ -460,6 +460,108 @@ func TestClaudeSource_GetEntries_PreservesFullContent(t *testing.T) {
 	}
 }
 
+func TestClaudeSource_GetEntries_EmptySession(t *testing.T) {
+	claudeHome := setupTestClaudeHome(t, "project1")
+	now := time.Now().UTC()
+
+	// Session with only meta and system messages -- no real user turns
+	sessionFile := filepath.Join(claudeHome, "projects", "project1", "session1.jsonl")
+	appendSessionLine(t, sessionFile, userLine("meta only", now, true))
+	appendSessionLine(t, sessionFile, userLine("[Request interrupted by user]", now.Add(1*time.Minute), false))
+
+	source := NewClaudeSource(claudeHome)
+	entries, err := source.GetEntries(now.Add(-1*time.Hour), now.Add(1*time.Hour))
+	if err != nil {
+		t.Fatalf("GetEntries failed: %v", err)
+	}
+
+	if len(entries) != 0 {
+		t.Errorf("expected 0 entries for session with no real turns, got %d", len(entries))
+	}
+}
+
+func TestClaudeSource_GetEntries_NoAssistantMessages(t *testing.T) {
+	claudeHome := setupTestClaudeHome(t, "project1")
+	now := time.Now().UTC()
+
+	sessionFile := filepath.Join(claudeHome, "projects", "project1", "session1.jsonl")
+	appendSessionLine(t, sessionFile, userLine("interrupted before response", now, false))
+
+	source := NewClaudeSource(claudeHome)
+	entries, err := source.GetEntries(now.Add(-1*time.Hour), now.Add(1*time.Hour))
+	if err != nil {
+		t.Fatalf("GetEntries failed: %v", err)
+	}
+
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+
+	// No model should be set
+	if entries[0].Metadata["model"] != "" {
+		t.Errorf("expected empty model, got '%s'", entries[0].Metadata["model"])
+	}
+	if entries[0].Metadata["turn_count"] != "1" {
+		t.Errorf("expected turn_count '1', got '%s'", entries[0].Metadata["turn_count"])
+	}
+}
+
+func TestClaudeSource_GetEntries_MultiSessionFile(t *testing.T) {
+	claudeHome := setupTestClaudeHome(t, "project1")
+	now := time.Now().UTC()
+
+	// Two different sessions in the same file (defensive test)
+	sessionFile := filepath.Join(claudeHome, "projects", "project1", "session1.jsonl")
+	appendSessionLine(t, sessionFile, userLineWithOpts("session A", now, false, "session-a", "/tmp/test/project1", "main"))
+	appendSessionLine(t, sessionFile, userLineWithOpts("session B", now.Add(1*time.Minute), false, "session-b", "/tmp/test/project1", "main"))
+
+	source := NewClaudeSource(claudeHome)
+	entries, err := source.GetEntries(now.Add(-1*time.Hour), now.Add(1*time.Hour))
+	if err != nil {
+		t.Fatalf("GetEntries failed: %v", err)
+	}
+
+	if len(entries) != 2 {
+		t.Fatalf("expected 2 entries from 2 sessions, got %d", len(entries))
+	}
+
+	sessionIDs := map[string]bool{}
+	for _, e := range entries {
+		sessionIDs[e.Metadata["session_id"]] = true
+	}
+	if !sessionIDs["session-a"] || !sessionIDs["session-b"] {
+		t.Errorf("expected both sessions, got: %v", sessionIDs)
+	}
+}
+
+func TestClaudeSource_GetEntries_AllLinesFail(t *testing.T) {
+	claudeHome := setupTestClaudeHome(t, "project1")
+	now := time.Now().UTC()
+
+	sessionFile := filepath.Join(claudeHome, "projects", "project1", "session1.jsonl")
+	appendSessionLine(t, sessionFile, "not json 1")
+	appendSessionLine(t, sessionFile, "not json 2")
+	appendSessionLine(t, sessionFile, "not json 3")
+
+	var buf bytes.Buffer
+	source := NewClaudeSource(claudeHome)
+	source.warn = &buf
+
+	entries, err := source.GetEntries(now.Add(-1*time.Hour), now.Add(1*time.Hour))
+	if err != nil {
+		t.Fatalf("GetEntries failed: %v", err)
+	}
+
+	if len(entries) != 0 {
+		t.Errorf("expected 0 entries, got %d", len(entries))
+	}
+
+	warnings := buf.String()
+	if !strings.Contains(warnings, "all 3 parsed lines failed") {
+		t.Errorf("expected summary warning about all lines failing, got: %s", warnings)
+	}
+}
+
 func TestExtractUserText(t *testing.T) {
 	t.Run("string content", func(t *testing.T) {
 		raw := json.RawMessage(`"hello world"`)
