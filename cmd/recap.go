@@ -12,8 +12,8 @@ import (
 
 	"github.com/charemma/anker/internal/ai"
 	"github.com/charemma/anker/internal/config"
+	"github.com/charemma/anker/internal/recap"
 	"github.com/charemma/anker/internal/sources"
-	"github.com/charemma/anker/internal/sources/git"
 	"github.com/charemma/anker/internal/storage"
 	"github.com/charemma/anker/internal/timerange"
 	"github.com/spf13/cobra"
@@ -110,80 +110,28 @@ Examples:
 		}
 
 		// Collect entries from all sources
-		var allEntries []sources.Entry
-		var gitSources []*git.GitSource
-
-		for _, cfg := range sourceConfigs {
-			source, err := createSource(cfg)
-			if err != nil {
-				fmt.Printf("Warning: %v at %s\n", err, cfg.Path)
-				continue
-			}
-
-			if recapFormat == "markdown" {
-				if gs, ok := source.(*git.GitSource); ok {
-					gitSources = append(gitSources, gs)
-				}
-			}
-
-			entries, err := source.GetEntries(tr.From, tr.To)
-			if err != nil {
-				fmt.Printf("Warning: failed to get entries from %s %s: %v\n", cfg.Type, cfg.Path, err)
-				continue
-			}
-
-			allEntries = append(allEntries, entries...)
+		result, err := recap.BuildRecap(sourceConfigs, tr, timespec, recapFormat, createSource, os.Stderr)
+		if err != nil {
+			return err
 		}
 
-		// Enrich with diffs if markdown format requested
-		if recapFormat == "markdown" {
-			for _, gitSource := range gitSources {
-				// Find entries from this git source and enrich them
-				var sourceEntries []sources.Entry
-				for _, entry := range allEntries {
-					if entry.Location == gitSource.Location() {
-						sourceEntries = append(sourceEntries, entry)
-					}
-				}
-				if err := gitSource.EnrichWithDiffs(sourceEntries); err != nil {
-					fmt.Printf("Warning: failed to enrich diffs for %s: %v\n", gitSource.Location(), err)
-				}
-				// Update entries in allEntries with enriched data
-				for i := range allEntries {
-					if allEntries[i].Location == gitSource.Location() {
-						for _, enriched := range sourceEntries {
-							if allEntries[i].Metadata["hash"] == enriched.Metadata["hash"] {
-								allEntries[i] = enriched
-								break
-							}
-						}
-					}
-				}
-			}
-		}
-
-		if len(allEntries) == 0 {
+		if len(result.Entries) == 0 {
 			fmt.Printf("No activity found for %s\n", timespec)
 			return nil
 		}
 
-		// Sort entries by timestamp (newest first)
-		sort.Slice(allEntries, func(i, j int) bool {
-			return allEntries[i].Timestamp.After(allEntries[j].Timestamp)
-		})
-
 		// Generate report based on format
 		switch recapFormat {
 		case "simple":
-			return printSimpleRecap(allEntries, tr, timespec)
+			return printSimpleRecap(result.Entries, tr, timespec)
 		case "detailed":
-			return printDetailedRecap(os.Stdout, allEntries, tr, timespec)
+			return printDetailedRecap(os.Stdout, result.Entries, tr, timespec)
 		case "json":
-			return printJSONRecap(allEntries, tr, timespec)
+			return printJSONRecap(result.Entries, tr, timespec)
 		case "markdown":
-			return printMarkdownRecap(allEntries, tr, timespec)
+			return printMarkdownRecap(result.Entries, tr, timespec)
 		case "ai":
-			return printAIRecap(cfg, allEntries, tr, timespec)
+			return printAIRecap(cfg, result.Entries, tr, timespec)
 		default:
 			return fmt.Errorf("unknown format: %s", recapFormat)
 		}
@@ -447,17 +395,6 @@ func printMarkdownRecap(allEntries []sources.Entry, tr *timerange.TimeRange, tim
 	}
 
 	return nil
-}
-
-func splitTrimmed(s, sep string) []string {
-	var parts []string
-	for part := range strings.SplitSeq(s, sep) {
-		trimmed := strings.TrimSpace(part)
-		if trimmed != "" {
-			parts = append(parts, trimmed)
-		}
-	}
-	return parts
 }
 
 func init() {
