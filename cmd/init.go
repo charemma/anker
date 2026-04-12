@@ -1,12 +1,14 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/charemma/anker/internal/config"
+	"github.com/charemma/anker/internal/git"
 	"github.com/charemma/anker/internal/sources"
 	"github.com/charemma/anker/internal/storage"
 	"github.com/spf13/cobra"
@@ -20,16 +22,20 @@ var initCmd = &cobra.Command{
 	Long: `Scan common locations and add sources interactively.
 
 Scans:
-  ~/code/         git repositories (depth 1)
-  ~/.claude/      Claude Code sessions
-  ~/Documents/    Obsidian vault or markdown directory
-  ./              current directory
+  ~/code/               git repositories (depth 1)
+  ~/.claude/            Claude Code sessions
+  ~/Documents/Notes/    Obsidian vault or markdown directory
+  ./                    current directory
 
 Examples:
   anker init
   anker init --yes`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if !initIsTTY() && !initYes {
+			return fmt.Errorf("interactive confirmation required, use --yes to skip")
+		}
+
 		store, err := storage.NewStore()
 		if err != nil {
 			return fmt.Errorf("failed to initialize storage: %w", err)
@@ -42,10 +48,8 @@ Examples:
 
 		fmt.Println("Scanning for sources...")
 
-		discovered := scanDefaultLocations(registered)
-
-		// Deduplicate by (type, absPath)
-		discovered = dedup(discovered)
+		discovered := initScanLocations(registered)
+		discovered = initDedup(discovered)
 
 		if len(discovered) == 0 {
 			fmt.Println()
@@ -58,56 +62,57 @@ Examples:
 		}
 
 		fmt.Println()
-		printGrouped(discovered)
+		initPrintGrouped(discovered)
 		fmt.Println()
 
-		if initYes {
-			return addAll(store, discovered)
-		}
-
-		if !isTTY() {
-			return fmt.Errorf("interactive confirmation required, use --yes to skip")
-		}
-
-		_, _ = fmt.Fprintf(os.Stdout, "Review each location? [Y/n]: ")
-		answer := strings.TrimSpace(strings.ToLower(readLine()))
-
-		if answer == "n" || answer == "no" {
-			// Add everything without per-item prompts
-			return addAll(store, discovered)
-		}
-
-		// Per-item confirmation
 		added := 0
-		for _, d := range discovered {
-			_, _ = fmt.Fprintf(os.Stdout, "%-10s %s  add? [y/n/skip-all]: ", d.Type, d.Path)
-			ans := strings.TrimSpace(strings.ToLower(readLine()))
-			switch ans {
-			case "y", "yes", "":
-				if err := addSingleSource(store, d.Type, d.Path); err != nil {
+
+		if initYes {
+			added, err = initAddAll(store, discovered)
+			if err != nil {
+				return err
+			}
+		} else {
+			_, _ = fmt.Fprint(os.Stdout, "Review each location? [Y/n]: ")
+			answer := strings.TrimSpace(strings.ToLower(initReadLine()))
+
+			if answer == "n" || answer == "no" {
+				added, err = initAddAll(store, discovered)
+				if err != nil {
 					return err
 				}
-				added++
-			case "skip-all", "s":
-				fmt.Println("skipping remaining sources")
-				goto done
+			} else {
+				// Per-item confirmation
+			loop:
+				for _, d := range discovered {
+					_, _ = fmt.Fprintf(os.Stdout, "%-10s %s  add? [y/n/skip-all]: ", d.Type, d.Path)
+					ans := strings.TrimSpace(strings.ToLower(initReadLine()))
+					switch ans {
+					case "y", "yes", "":
+						if addErr := initAddSource(store, d.Type, d.Path); addErr != nil {
+							return addErr
+						}
+						added++
+					case "skip-all", "s":
+						fmt.Println("skipping remaining sources")
+						break loop
+					}
+				}
 			}
 		}
 
-	done:
-		fmt.Printf("\nAdded %d source(s). Run `anker recap today` to get started.\n", added)
-
 		// Write config file if it doesn't exist
-		if _, err := config.EnsureConfigFile(); err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "warning: could not write config file: %v\n", err)
+		if _, cfgErr := config.EnsureConfigFile(); cfgErr != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "warning: could not write config file: %v\n", cfgErr)
 		}
 
+		fmt.Printf("\nAdded %d source(s). Run `anker recap today` to get started.\n", added)
 		return nil
 	},
 }
 
-// scanDefaultLocations scans the standard anker user locations and returns candidates.
-func scanDefaultLocations(registered []sources.Config) []sources.DetectedSource {
+// initScanLocations scans the standard anker user locations and returns candidates.
+func initScanLocations(registered []sources.Config) []sources.DetectedSource {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return nil
@@ -115,36 +120,38 @@ func scanDefaultLocations(registered []sources.Config) []sources.DetectedSource 
 
 	var all []sources.DetectedSource
 
-	locations := []struct {
+	type scanEntry struct {
 		path  string
 		depth int
-	}{
-		{filepath.Join(home, "code"), 1},
-		{filepath.Join(home, ".claude"), 0},   // DetectType directly
-		{filepath.Join(home, "Documents"), 0}, // DetectType directly
-		{".", 0},                              // cwd
 	}
 
-	for _, loc := range locations {
-		absPath, err := filepath.Abs(loc.path)
-		if err != nil {
+	cwd, _ := os.Getwd()
+
+	entries := []scanEntry{
+		{filepath.Join(home, "code"), 1},
+		{filepath.Join(home, ".claude"), 0},
+		{filepath.Join(home, "Documents", "Notes"), 0},
+		{cwd, 0},
+	}
+
+	for _, e := range entries {
+		absPath, absErr := filepath.Abs(e.path)
+		if absErr != nil {
 			continue
 		}
-		if _, err := os.Stat(absPath); err != nil {
-			continue // location doesn't exist
+		if _, statErr := os.Stat(absPath); statErr != nil {
+			continue
 		}
 
-		if loc.depth == 0 {
-			// Check the location itself
-			detected, err := sources.DetectType(absPath)
-			if err != nil {
+		if e.depth == 0 {
+			detected, detectErr := sources.DetectType(absPath)
+			if detectErr != nil {
 				continue
 			}
 			all = append(all, detected...)
 		} else {
-			// Scan children
-			found, err := sources.DiscoverSources(absPath, loc.depth, registered)
-			if err != nil {
+			found, discoverErr := sources.DiscoverSources(absPath, e.depth, registered)
+			if discoverErr != nil {
 				continue
 			}
 			all = append(all, found...)
@@ -154,8 +161,8 @@ func scanDefaultLocations(registered []sources.Config) []sources.DetectedSource 
 	return all
 }
 
-// dedup removes duplicate (type, path) pairs from the slice.
-func dedup(in []sources.DetectedSource) []sources.DetectedSource {
+// initDedup removes duplicate (type, path) pairs.
+func initDedup(in []sources.DetectedSource) []sources.DetectedSource {
 	seen := make(map[string]bool, len(in))
 	out := make([]sources.DetectedSource, 0, len(in))
 	for _, d := range in {
@@ -168,11 +175,53 @@ func dedup(in []sources.DetectedSource) []sources.DetectedSource {
 	return out
 }
 
-// printGrouped prints sources grouped by their parent directory for readability.
-func printGrouped(discovered []sources.DetectedSource) {
+// initPrintGrouped prints sources with type and path.
+func initPrintGrouped(discovered []sources.DetectedSource) {
 	for _, d := range discovered {
 		fmt.Printf("  %-10s %s\n", d.Type, d.Path)
 	}
+}
+
+// initAddAll adds all discovered sources and returns the count added.
+func initAddAll(store *storage.Store, discovered []sources.DetectedSource) (int, error) {
+	added := 0
+	for _, d := range discovered {
+		if err := initAddSource(store, d.Type, d.Path); err != nil {
+			return added, err
+		}
+		added++
+	}
+	return added, nil
+}
+
+// initAddSource adds a single source to the store, resolving author email for git sources.
+func initAddSource(store *storage.Store, sourceType, path string) error {
+	cfg := sources.Config{
+		Type:     sourceType,
+		Path:     path,
+		Metadata: make(map[string]string),
+	}
+
+	if sourceType == "git" {
+		if email, err := git.GetAuthorEmail(); err == nil && email != "" {
+			cfg.Metadata["author"] = email
+		}
+	}
+
+	return store.AddSource(cfg)
+}
+
+// initIsTTY reports whether stdin is an interactive terminal.
+func initIsTTY() bool {
+	fi, err := os.Stdin.Stat()
+	return err == nil && (fi.Mode()&os.ModeCharDevice) != 0
+}
+
+// initReadLine reads one line from stdin.
+func initReadLine() string {
+	r := bufio.NewReader(os.Stdin)
+	line, _ := r.ReadString('\n')
+	return strings.TrimRight(line, "\r\n")
 }
 
 func init() {
