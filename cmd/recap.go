@@ -11,6 +11,7 @@ import (
 	"github.com/charemma/anker/internal/recap"
 	"github.com/charemma/anker/internal/storage"
 	"github.com/charemma/anker/internal/timerange"
+	"github.com/charemma/anker/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -37,7 +38,7 @@ Time specifications:
   last 7 days      Relative range
 
 Output formats (--format):
-  simple           Commit messages only (default)
+  simple           Chronological summary with source colors (default)
   detailed         Commit messages with timestamps and stats
   json             Structured JSON for programmatic use
   markdown         Markdown with full diffs (for AI/documentation)
@@ -49,7 +50,8 @@ Examples:
   anker recap thisweek --format detailed
   anker recap "December 2025" --format markdown > recap.md
   anker recap 2025-12-01..2025-12-31
-  anker recap today --format ai`,
+  anker recap today --format ai
+  anker recap thisweek --plain | grep feat`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Default to "today" if no argument provided
@@ -97,6 +99,8 @@ Examples:
 			return fmt.Errorf("invalid format: %s (must be simple, detailed, json, markdown, or ai)", recapFormat)
 		}
 
+		plain := ui.IsPlain(cmd)
+
 		// Collect entries from all sources
 		result, err := recap.BuildRecap(sourceConfigs, tr, timespec, recap.BuildOptions{EnrichDiffs: recapFormat == "markdown"}, createSource, os.Stderr)
 		if err != nil {
@@ -126,7 +130,7 @@ Examples:
 			}, recapPrompt, recapAPIKey)
 		}
 
-		return recap.Render(os.Stdout, result, recapFormat)
+		return recap.Render(os.Stdout, result, recapFormat, plain)
 	},
 }
 
@@ -135,6 +139,7 @@ func init() {
 	recapCmd.Flags().StringVarP(&recapFormat, "format", "f", "simple", "Output format (simple, detailed, json, markdown, ai)")
 	recapCmd.Flags().StringVar(&recapPrompt, "prompt", "", "Custom prompt for AI summary (--format ai)")
 	recapCmd.Flags().StringVar(&recapAPIKey, "api-key", "", "API key for AI summary (--format ai)")
+	recapCmd.Flags().Bool("plain", false, "No styling, no ANSI -- for pipes, scripts, grep")
 
 	_ = recapCmd.RegisterFlagCompletionFunc("format", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return []string{"simple", "detailed", "json", "markdown", "ai"}, cobra.ShellCompDirectiveNoFileComp

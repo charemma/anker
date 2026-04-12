@@ -6,10 +6,11 @@ import (
 )
 
 // Render dispatches to the appropriate renderer based on format string.
-func Render(w io.Writer, result *RecapResult, format string) error {
+// plain disables ANSI styling (honoured by renderers that support it).
+func Render(w io.Writer, result *RecapResult, format string, plain bool) error {
 	switch format {
-	case "simple":
-		return RenderSimple(w, result)
+	case "simple", "":
+		return RenderSummary(w, result, plain)
 	case "detailed":
 		return RenderDetailed(w, result)
 	case "json":
