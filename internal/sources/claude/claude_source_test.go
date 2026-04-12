@@ -11,22 +11,23 @@ import (
 	"time"
 )
 
-func TestProjectNameFromDir(t *testing.T) {
+func TestProjectNameFromCWD(t *testing.T) {
 	tests := []struct {
 		input    string
 		expected string
 	}{
-		{"-home-user-code-anker", "anker"},
-		{"-home-user-code-my-project", "project"},
-		{"-Users-charemma-code-monorepo", "monorepo"},
-		{"standalone", "standalone"},
+		{"/home/user/code/anker", "anker"},
+		{"/home/user/code/my-project", "my-project"},
+		{"/Users/charemma/code/nixos-config", "nixos-config"},
+		{"/home/charemma/Documents/Notes/1 Projects/anker-evolution-strategy", "anker-evolution-strategy"},
+		{"", "unknown"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			got := projectNameFromDir(tt.input)
+			got := projectNameFromCWD(tt.input)
 			if got != tt.expected {
-				t.Errorf("projectNameFromDir(%q) = %q, want %q", tt.input, got, tt.expected)
+				t.Errorf("projectNameFromCWD(%q) = %q, want %q", tt.input, got, tt.expected)
 			}
 		})
 	}
@@ -72,10 +73,11 @@ func TestClaudeSource_GetEntries(t *testing.T) {
 	yesterday := now.Add(-24 * time.Hour)
 	lastWeek := now.Add(-7 * 24 * time.Hour)
 
+	cwd := "/home/user/code/anker"
 	sessionFile := filepath.Join(claudeHome, "projects", "-home-user-code-anker", "session1.jsonl")
-	appendSessionLine(t, sessionFile, userLine("implement the claude source", now.Add(-1*time.Hour), false))
-	appendSessionLine(t, sessionFile, userLine("fix the test", now.Add(-30*time.Minute), false))
-	appendSessionLine(t, sessionFile, userLine("old message outside range", lastWeek, false))
+	appendSessionLine(t, sessionFile, userLineWithOpts("implement the claude source", now.Add(-1*time.Hour), false, "s1", cwd, "main"))
+	appendSessionLine(t, sessionFile, userLineWithOpts("fix the test", now.Add(-30*time.Minute), false, "s1", cwd, "main"))
+	appendSessionLine(t, sessionFile, userLineWithOpts("old message outside range", lastWeek, false, "s1", cwd, "main"))
 
 	source := NewClaudeSource(claudeHome)
 	entries, err := source.GetEntries(yesterday, now.Add(1*time.Hour))
@@ -103,7 +105,7 @@ func TestClaudeSource_GetEntries(t *testing.T) {
 		if entry.Metadata["session_file"] != "session1.jsonl" {
 			t.Errorf("expected session_file 'session1.jsonl', got '%s'", entry.Metadata["session_file"])
 		}
-		// Content should be prefixed with project name
+		// Content should be prefixed with project name from cwd
 		if !strings.HasPrefix(entry.Content, "[anker] ") {
 			t.Errorf("expected content to start with '[anker] ', got '%s'", entry.Content)
 		}
@@ -320,8 +322,9 @@ func setupTestClaudeHome(t *testing.T, projectDirs ...string) string {
 }
 
 // userLine creates a JSONL line for a user message with text content blocks.
+// Default cwd is "/tmp/test/project1" so projectNameFromCWD returns "project1".
 func userLine(text string, ts time.Time, isMeta bool) string {
-	return userLineWithOpts(text, ts, isMeta, "test-session-id", "/tmp/test/project", "main")
+	return userLineWithOpts(text, ts, isMeta, "test-session-id", "/tmp/test/project1", "main")
 }
 
 // userLineWithOpts creates a JSONL user line with explicit session/cwd/branch values.

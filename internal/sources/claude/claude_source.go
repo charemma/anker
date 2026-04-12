@@ -147,6 +147,7 @@ func (c *ClaudeSource) parseSessionFile(path string, from, to time.Time, project
 	sessionFile := filepath.Base(path)
 	lineNum := 0
 	parseErrors := 0
+	cwd := "" // populated from the first JSONL line that has it
 
 	for scanner.Scan() {
 		line := scanner.Bytes()
@@ -157,6 +158,11 @@ func (c *ClaudeSource) parseSessionFile(path string, from, to time.Time, project
 			fmt.Fprintf(c.warn, "warning: %s: skipping line %d: %v\n", sessionFile, lineNum, err)
 			parseErrors++
 			continue
+		}
+
+		// Capture cwd from the first line that has it
+		if cwd == "" && jl.CWD != "" {
+			cwd = jl.CWD
 		}
 
 		if jl.Type != "user" {
@@ -198,8 +204,8 @@ func (c *ClaudeSource) parseSessionFile(path string, from, to time.Time, project
 			continue
 		}
 
-		// Prefix with project name for context
-		projectName := projectNameFromDir(project)
+		// Prefix with project name derived from cwd
+		projectName := projectNameFromCWD(cwd)
 		content := fmt.Sprintf("[%s] %s", projectName, text)
 
 		entry := sources.Entry{
@@ -251,14 +257,13 @@ func extractUserText(raw json.RawMessage) string {
 	return strings.Join(parts, " ")
 }
 
-// projectNameFromDir extracts a human-readable project name from the encoded
-// directory name. Takes the last segment, e.g. "-home-user-code-anker" -> "anker".
-func projectNameFromDir(encoded string) string {
-	encoded = strings.TrimRight(encoded, "-")
-	if idx := strings.LastIndex(encoded, "-"); idx != -1 {
-		return encoded[idx+1:]
+// projectNameFromCWD extracts a human-readable project name from the working
+// directory path found in JSONL session data.
+func projectNameFromCWD(cwd string) string {
+	if cwd == "" {
+		return "unknown"
 	}
-	return encoded
+	return filepath.Base(cwd)
 }
 
 // isSystemMessage checks if the text is an auto-generated system message
