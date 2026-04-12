@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/charemma/anker/internal/config"
@@ -80,6 +81,11 @@ Examples:
 			return fmt.Errorf("failed to load sources: %w", err)
 		}
 
+		cfg, cfgErr := config.Load()
+		if cfgErr != nil {
+			cfg = config.DefaultConfig()
+		}
+
 		if !initYes {
 			fmt.Println(styleBold.Render("Welcome to anker. Let's find your sources."))
 			fmt.Println("This wizard adds the data sources anker reads for your recap.")
@@ -109,12 +115,22 @@ Examples:
 			return runErr
 		}
 
+		emailChanged := false
 		if !initYes {
-			initStepEmail()
+			emailChanged, runErr = initStepEmail(cfg)
+			if runErr != nil {
+				return runErr
+			}
 		}
 
-		if _, cfgErr := config.EnsureConfigFile(); cfgErr != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "warning: could not write config file: %v\n", cfgErr)
+		if emailChanged {
+			if err := config.Save(cfg); err != nil {
+				_, _ = fmt.Fprintf(os.Stderr, "warning: could not save config: %v\n", err)
+			}
+		} else {
+			if _, cfgErr := config.EnsureConfigFile(); cfgErr != nil {
+				_, _ = fmt.Fprintf(os.Stderr, "warning: could not write config file: %v\n", cfgErr)
+			}
 		}
 
 		fmt.Println()
@@ -625,38 +641,81 @@ func initStepMarkdown(store *storage.Store, registered []sources.Config) (int, e
 	return 1, nil
 }
 
-func initStepEmail() {
-	email, err := git.GetAuthorEmail()
-	if err != nil || email == "" {
-		return // no email configured, nothing to confirm
+// initStepEmail handles the email configuration step.
+// Returns true if emails were updated and config should be saved.
+func initStepEmail(cfg *config.Config) (bool, error) {
+	existing := cfg.AllEmails()
+
+	if len(existing) > 0 {
+		initCheckLine("Git author", strings.Join(existing, ", ")+" (already configured)")
+		return false, nil
 	}
 
-	var change bool
-	if runErr := huh.NewConfirm().
-		Title(fmt.Sprintf("Using %s from your git config. Change?", email)).
-		Affirmative("Yes").
-		Negative("No").
-		Value(&change).
-		Run(); initIsAbort(runErr) || !change {
+	defaultEmail, _ := git.GetAuthorEmail()
+	if defaultEmail == "" {
+		// Nothing to seed from; skip silently.
+		return false, nil
+	}
+
+	initSectionHeader("Git author email")
+
+	firstEmail := defaultEmail
+	if err := huh.NewInput().
+		Title("Git author email for filtering commits").
+		Value(&firstEmail).
+		Run(); initIsAbort(err) {
 		fmt.Println()
-		return
+		return false, nil
+	} else if err != nil {
+		return false, err
 	}
-
 	fmt.Println()
 
-	var newEmail string
-	if runErr := huh.NewInput().
-		Title("New git author email").
-		Value(&newEmail).
-		Run(); initIsAbort(runErr) || newEmail == "" {
+	var collected []string
+	if firstEmail != "" {
+		collected = append(collected, firstEmail)
+	}
+
+	for {
+		var addAnother bool
+		if err := huh.NewConfirm().
+			Title("Add another email address?").
+			Affirmative("Yes").
+			Negative("No").
+			Value(&addAnother).
+			Run(); initIsAbort(err) || !addAnother {
+			break
+		} else if err != nil {
+			return false, err
+		}
+
+		var email string
+		if err := huh.NewInput().
+			Title("Additional email address").
+			Value(&email).
+			Run(); initIsAbort(err) {
+			break
+		} else if err != nil {
+			return false, err
+		}
 		fmt.Println()
-		return
+
+		if email != "" && !slices.Contains(collected, email) {
+			collected = append(collected, email)
+		}
 	}
 
 	fmt.Println()
-	fmt.Println(styleMuted.Render(
-		fmt.Sprintf("Note: update your git config with: git config --global user.email %s", newEmail)))
+
+	if len(collected) == 0 {
+		return false, nil
+	}
+
+	cfg.AuthorEmails = collected
+	cfg.AuthorEmail = collected[0]
+	fmt.Println(styleSuccess.Render("✓ Git author: " + strings.Join(collected, ", ")))
 	fmt.Println()
+	return true, nil
 }
 
 // initCheckLine prints a compact "✓ label   detail" line for already-configured steps.
