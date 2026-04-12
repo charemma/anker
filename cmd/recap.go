@@ -14,17 +14,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const defaultAIPrompt = `Summarize my workday based on the activity log below.
-Start with the period as a heading (e.g. "# Recap: 2026-02-23 to 2026-03-01").
-Group by topic or theme, not chronologically.
-Keep it concise -- a few bullet points per topic.
-Skip trivial entries (typo fixes, formatting, etc.) unless they are part of a larger change.
-For each topic, also highlight:
-- Decisions made and why (e.g. chose X over Y because...)
-- Key insights or lessons learned
-- Open threads or unfinished business
-Only include these if they are actually present in the data -- don't invent them.`
-
 var (
 	recapFormat string
 	recapPrompt string
@@ -117,53 +106,24 @@ Examples:
 
 		// AI format uses detailed rendering as input, then transforms via LLM
 		if recapFormat == "ai" {
-			return printAIRecap(cfg, result, tr, timespec)
+			var buf bytes.Buffer
+			if err := recap.RenderDetailed(&buf, result); err != nil {
+				return fmt.Errorf("failed to render recap: %w", err)
+			}
+
+			period := fmt.Sprintf("%s (%s to %s)", timespec, tr.From.Format("2006-01-02"), tr.To.Format("2006-01-02"))
+			return ai.Transform(context.Background(), os.Stdout, buf.String(), period, ai.TransformConfig{
+				AIPrompt:     cfg.AIPrompt,
+				AIBackend:    cfg.AIBackend,
+				AICLICommand: cfg.AICLICommand,
+				AIBaseURL:    cfg.AIBaseURL,
+				AIModel:      cfg.AIModel,
+				AIAPIKey:     cfg.AIAPIKey,
+			}, recapPrompt, recapAPIKey)
 		}
 
 		return recap.Render(os.Stdout, result, recapFormat)
 	},
-}
-
-func printAIRecap(cfg *config.Config, result *recap.RecapResult, tr *timerange.TimeRange, timespec string) error {
-	// Render detailed output to a string
-	var buf bytes.Buffer
-	if err := recap.RenderDetailed(&buf, result); err != nil {
-		return fmt.Errorf("failed to render recap: %w", err)
-	}
-
-	// Resolve prompt: --prompt flag > config > default
-	prompt := defaultAIPrompt
-	if cfg.AIPrompt != "" {
-		prompt = cfg.AIPrompt
-	}
-	if recapPrompt != "" {
-		prompt = recapPrompt
-	}
-
-	// Inject time range context
-	period := fmt.Sprintf("%s to %s", tr.From.Format("2006-01-02"), tr.To.Format("2006-01-02"))
-	prompt = fmt.Sprintf("Period: %s (%s)\n\n%s", timespec, period, prompt)
-
-	if cfg.AIBackend == "cli" {
-		return ai.RunCLI(cfg.AICLICommand, prompt, buf.String(), os.Stdout)
-	}
-
-	// Resolve API key: --api-key flag > AI_API_KEY env > config
-	apiKey := cfg.AIAPIKey
-	if envKey := os.Getenv("AI_API_KEY"); envKey != "" {
-		apiKey = envKey
-	}
-	if recapAPIKey != "" {
-		apiKey = recapAPIKey
-	}
-
-	client := &ai.Client{
-		BaseURL: cfg.AIBaseURL,
-		APIKey:  apiKey,
-		Model:   cfg.AIModel,
-	}
-
-	return client.StreamCompletion(context.Background(), prompt, buf.String(), os.Stdout)
 }
 
 func init() {
