@@ -125,13 +125,20 @@ func initScanLocations(registered []sources.Config) []sources.DetectedSource {
 		depth int
 	}
 
-	cwd, _ := os.Getwd()
-
 	entries := []scanEntry{
 		{filepath.Join(home, "code"), 1},
 		{filepath.Join(home, ".claude"), 0},
 		{filepath.Join(home, "Documents", "Notes"), 0},
-		{cwd, 0},
+	}
+
+	// Add cwd only when it is not the home directory itself -- scanning home
+	// as a source candidate makes no sense.
+	if cwd, cwdErr := os.Getwd(); cwdErr == nil {
+		cwdAbs, _ := filepath.Abs(cwd)
+		homeAbs, _ := filepath.Abs(home)
+		if cwdAbs != homeAbs {
+			entries = append(entries, scanEntry{cwd, 0})
+		}
 	}
 
 	for _, e := range entries {

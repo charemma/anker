@@ -54,12 +54,12 @@ func TestDetectType(t *testing.T) {
 			wantTypes: []string{"markdown"},
 		},
 		{
-			name: "git repo with markdown files",
+			name: "git repo with markdown files -- only git",
 			setup: func(t *testing.T, dir string) {
 				mkDir(t, dir, ".git")
 				mkFile(t, dir, "README.md")
 			},
-			wantTypes: []string{"git", "markdown"},
+			wantTypes: []string{"git"},
 		},
 		{
 			name: "obsidian vault with markdown files -- no markdown type",
@@ -70,12 +70,12 @@ func TestDetectType(t *testing.T) {
 			wantTypes: []string{"obsidian"},
 		},
 		{
-			name: "git repo and obsidian vault (both)",
+			name: "git repo and obsidian vault -- git wins",
 			setup: func(t *testing.T, dir string) {
 				mkDir(t, dir, ".git")
 				mkDir(t, dir, ".obsidian")
 			},
-			wantTypes: []string{"git", "obsidian"},
+			wantTypes: []string{"git"},
 		},
 		{
 			name:          "empty directory -- no match",

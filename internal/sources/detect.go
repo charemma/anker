@@ -13,8 +13,12 @@ type DetectedSource struct {
 	Reason string // human-readable: "found .git/"
 }
 
-// DetectType inspects path and returns all matching source types.
-// A single path can match multiple types (e.g. an Obsidian vault that is also a git repo).
+// DetectType inspects path and returns matching source types using priority rules:
+//   - .git/ present: only git (plus claude if applicable), obsidian and markdown skipped
+//   - .obsidian/ present: only obsidian (plus claude if applicable), markdown skipped
+//   - claude (.claude/projects/ child or path under ~/.claude): only claude, markdown skipped
+//   - markdown: only when none of the above match
+//
 // Returns an empty slice (no error) when no type can be inferred.
 func DetectType(path string) ([]DetectedSource, error) {
 	abs, err := filepath.Abs(path)
@@ -24,23 +28,24 @@ func DetectType(path string) ([]DetectedSource, error) {
 
 	var results []DetectedSource
 
-	// git: .git/ subdirectory
-	if isDir(filepath.Join(abs, ".git")) {
-		results = append(results, DetectedSource{Path: abs, Type: "git", Reason: "found .git/"})
-	}
+	hasGit := isDir(filepath.Join(abs, ".git"))
+	hasObsidian := isDir(filepath.Join(abs, ".obsidian"))
+	hasClaude := isClaudePath(abs)
 
-	// obsidian: .obsidian/ subdirectory
-	if isDir(filepath.Join(abs, ".obsidian")) {
+	// git takes highest priority; obsidian is next. They are mutually exclusive.
+	if hasGit {
+		results = append(results, DetectedSource{Path: abs, Type: "git", Reason: "found .git/"})
+	} else if hasObsidian {
 		results = append(results, DetectedSource{Path: abs, Type: "obsidian", Reason: "found .obsidian/"})
 	}
 
-	// claude: path is under ~/.claude or has .claude/projects/ child
-	if isClaudePath(abs) {
+	// claude is independent of git/obsidian but blocks markdown.
+	if hasClaude {
 		results = append(results, DetectedSource{Path: abs, Type: "claude", Reason: "found .claude/projects/"})
 	}
 
-	// markdown: .md files as direct children, only when no .obsidian/
-	if !isDir(filepath.Join(abs, ".obsidian")) && hasMDFiles(abs) {
+	// markdown only when no git, obsidian, or claude source was found.
+	if !hasGit && !hasObsidian && !hasClaude && hasMDFiles(abs) {
 		results = append(results, DetectedSource{Path: abs, Type: "markdown", Reason: "found .md files"})
 	}
 
