@@ -6,11 +6,11 @@
 
 ## Problem
 
-Users work across multiple repos/sources. How should anker know what to track?
+Users work across multiple repos/sources. How should ikno know what to track?
 
 ## Options Considered
 
-**Explicit registration** (`anker source add git .`):
+**Explicit registration** (`ikno source add git .`):
 - Good: User controls exactly what's tracked (privacy)
 - Good: Predictable (no surprises)
 - Good: Clear mental model ("if tracked, I added it")
@@ -26,7 +26,7 @@ Users work across multiple repos/sources. How should anker know what to track?
 - Bad: Unclear which repos are relevant
 - Bad: Implicit behavior
 
-**Config file scanning** (`.ankerrc` lists dirs):
+**Config file scanning** (`.iknorc` lists dirs):
 - Good: One config for all
 - Bad: Still requires explicit configuration
 - Bad: Command-based is more discoverable
@@ -41,4 +41,4 @@ Why: Privacy, predictability, aligns with "explicit over implicit" principle.
 
 Auto-detection and directory scanning are fully compatible with explicit registration. The user still initiates every `source add` invocation -- the tool infers the type and discovers candidates within a path. No background discovery. No implicit tracking. The privacy principle is preserved.
 
-`anker source add ~/code` scans children and prompts before adding anything. `anker init` presents candidates and requires confirmation. Nothing is added without explicit user action.
+`ikno source add ~/code` scans children and prompts before adding anything. `ikno init` presents candidates and requires confirmation. Nothing is added without explicit user action.

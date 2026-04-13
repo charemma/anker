@@ -319,7 +319,7 @@ All checks run in `golang:1.24-alpine` containers for reproducibility.
 
 **Status badge in README:**
 ```markdown
-[![CI](https://github.com/charemma/anker/workflows/CI/badge.svg)](https://github.com/charemma/anker/actions)
+[![CI](https://github.com/charemma/ikno/workflows/CI/badge.svg)](https://github.com/charemma/ikno/actions)
 ```
 
 Shows visitors the project is well-tested.

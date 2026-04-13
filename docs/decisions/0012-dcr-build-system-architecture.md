@@ -96,7 +96,7 @@ Developer → Dagger directly
 **Example:**
 ```bash
 dagger call test --source=.
-dagger call build --source=. --export-path=./bin/anker
+dagger call build --source=. --export-path=./bin/ikno
 ```
 
 **Good:**
@@ -141,11 +141,11 @@ test:
 
 build-osx:
     @mkdir -p bin
-    dagger call build --source=. --goos=darwin --goarch=arm64 export --path=./bin/anker
+    dagger call build --source=. --goos=darwin --goarch=arm64 export --path=./bin/ikno
 
 build-linux:
     @mkdir -p bin
-    dagger call build --source=. --goos=linux --goarch=amd64 export --path=./bin/anker
+    dagger call build --source=. --goos=linux --goarch=amd64 export --path=./bin/ikno
 
 check:
     dagger call check --source=.
@@ -172,8 +172,8 @@ func (m *Anker) Build(ctx context.Context, source *dagger.Directory, goos string
         WithWorkdir("/src").
         WithEnvVariable("GOOS", goos).
         WithEnvVariable("GOARCH", goarch).
-        WithExec([]string{"go", "build", "-o", "anker", "."}).
-        File("/src/anker")
+        WithExec([]string{"go", "build", "-o", "ikno", "."}).
+        File("/src/ikno")
 }
 ```
 
@@ -284,7 +284,7 @@ dagger call check --source=.   # Same underlying code (builds for Linux)
 
 **Project structure:**
 ```
-anker/
+ikno/
 ├── justfile              # Developer commands (UX)
 ├── ci/
 │   └── main.go          # Dagger pipeline (logic)

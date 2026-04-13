@@ -6,7 +6,7 @@
 
 ## Problem
 
-Running `anker recap today --format ai --output ~/path/to/vault/recap.md` every time is tedious. Users need a way to set persistent defaults for recap flags, including an output path with date-based filenames.
+Running `ikno recap today --format ai --output ~/path/to/vault/recap.md` every time is tedious. Users need a way to set persistent defaults for recap flags, including an output path with date-based filenames.
 
 ## Options Considered
 

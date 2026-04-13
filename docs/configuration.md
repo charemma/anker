@@ -1,10 +1,10 @@
 # Configuration
 
-anker stores configuration in `~/.anker/` (or `$ANKER_HOME` if set).
+ikno stores configuration in `~/.ikno/` (or `$IKNO_HOME` if set).
 
 ## Configuration File
 
-Create `~/.anker/config.yaml` to customize behavior:
+Create `~/.ikno/config.yaml` to customize behavior:
 
 ```yaml
 # Week start day (default: monday)
@@ -17,24 +17,24 @@ author_email: you@work.com
 
 ## Custom Configuration Directory
 
-Set `ANKER_HOME` to use a different directory:
+Set `IKNO_HOME` to use a different directory:
 
 ```bash
-export ANKER_HOME=/path/to/custom/config
-anker recap today  # uses /path/to/custom/config instead of ~/.anker
+export IKNO_HOME=/path/to/custom/config
+ikno recap today  # uses /path/to/custom/config instead of ~/.ikno
 ```
 
 Add to your shell profile to make it permanent:
 
 ```bash
 # ~/.zshrc or ~/.bashrc
-export ANKER_HOME=/path/to/custom/config
+export IKNO_HOME=/path/to/custom/config
 ```
 
 ## Data Storage
 
 ```
-~/.anker/                  # or $ANKER_HOME if set
+~/.ikno/                  # or $IKNO_HOME if set
   ├── config.yaml          # your preferences
   ├── sources.yaml         # tracked repos and sources
   └── entries/             # (planned) manual work notes
@@ -42,7 +42,7 @@ export ANKER_HOME=/path/to/custom/config
 
 ### sources.yaml Format
 
-This file is managed by `anker source add/remove` commands, but you can inspect it:
+This file is managed by `ikno source add/remove` commands, but you can inspect it:
 
 ```yaml
 sources:
@@ -64,22 +64,22 @@ sources:
 
 ## Git Configuration
 
-anker reads your git config to filter commits by author:
+ikno reads your git config to filter commits by author:
 
 ```bash
 # Check your git identity
 git config --global user.name
 git config --global user.email
 
-# anker uses user.email to filter commits by default
+# ikno uses user.email to filter commits by default
 ```
 
 **Author email priority:**
 1. `--author` flag when adding a git source
-2. `author_email` in `~/.anker/config.yaml`
+2. `author_email` in `~/.ikno/config.yaml`
 3. `git config --global user.email` (automatic fallback)
 
-If none of these are set, anker will track ALL commits in the repository (with a warning).
+If none of these are set, ikno will track ALL commits in the repository (with a warning).
 
 ## Privacy
 
@@ -89,4 +89,4 @@ All data stays local:
 - Human-readable YAML and Markdown
 - No background processes
 
-anker only reads from locations you explicitly configure with `anker source add`.
+ikno only reads from locations you explicitly configure with `ikno source add`.

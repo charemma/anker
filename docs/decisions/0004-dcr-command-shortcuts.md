@@ -6,7 +6,7 @@
 
 ## Problem
 
-Users have different workflows and preferences. Some want short commands, others want descriptive ones. Core can't provide shortcuts for everyone without bloating. How can users customize anker to fit their workflow?
+Users have different workflows and preferences. Some want short commands, others want descriptive ones. Core can't provide shortcuts for everyone without bloating. How can users customize ikno to fit their workflow?
 
 ## Options Considered
 
@@ -15,7 +15,7 @@ Users have different workflows and preferences. Some want short commands, others
 - Good: Keeps core clean
 - Good: Familiar pattern (git)
 - Good: Portable across shells
-- Good: Part of anker config (shareable)
+- Good: Part of ikno config (shareable)
 - Good: Context-aware (future)
 - Good: Discoverable
 - Bad: Another thing to learn
@@ -31,7 +31,7 @@ Users have different workflows and preferences. Some want short commands, others
 **Shell aliases only:**
 - Good: Standard approach
 - Bad: Not portable across shells
-- Bad: Not part of anker config
+- Bad: Not part of ikno config
 - Bad: Can't be context-aware
 - Bad: Lost when switching machines
 
@@ -53,4 +53,4 @@ track = "source add git"
 today = "report today"
 ```
 
-Usage: `anker track` → `anker source add git .`
+Usage: `ikno track` → `ikno source add git .`
