@@ -25,6 +25,26 @@ var validStyles = []Style{
 	StyleStatus,
 }
 
+// StyleInfo holds the display metadata for a built-in style.
+type StyleInfo struct {
+	Name        Style
+	Description string
+}
+
+// styleInfos is the ordered list of built-in styles with their descriptions.
+var styleInfos = []StyleInfo{
+	{StyleBrief, "Done/Next/Blocker, tight bullets (5-10 lines)"},
+	{StyleDigest, "Thematically grouped, technical overview (12-18 lines)"},
+	{StyleStatus, "Progress/Blocker/Next, status-focused (12-18 lines)"},
+	{StyleReport, "Polished formal report, deliveries only (8-12 lines)"},
+	{StyleRetro, "Retrospective: good/bad/time/learnings (15-25 lines)"},
+}
+
+// StyleInfoList returns all built-in styles with their descriptions.
+func StyleInfoList() []StyleInfo {
+	return styleInfos
+}
+
 // IsValidStyle reports whether s is a known built-in style.
 func IsValidStyle(s string) bool {
 	return slices.Contains(validStyles, Style(s))

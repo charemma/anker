@@ -20,12 +20,14 @@ import (
 )
 
 var (
-	recapPrompt string
-	recapAPIKey string
-	recapRaw    bool
-	recapJSON   bool
-	recapStyle  string
-	recapLang   string
+	recapPrompt  string
+	recapAPIKey  string
+	recapRaw     bool
+	recapJSON    bool
+	recapStyle   string
+	recapLang    string
+	recapStyles  bool
+	recapVerbose bool
 )
 
 var recapCmd = &cobra.Command{
@@ -66,6 +68,10 @@ Examples:
   anker recap 2025-12-01..2025-12-31 --json`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if recapStyles {
+			return runListStyles(os.Stdout, recapVerbose)
+		}
+
 		cfg, err := config.Load()
 		if err != nil {
 			return fmt.Errorf("failed to load config: %w", err)
@@ -167,6 +173,47 @@ Examples:
 	},
 }
 
+// runListStyles prints all available styles to w.
+// If verbose is true, the full prompt text for each style is also shown.
+func runListStyles(w *os.File, verbose bool) error {
+	_, _ = fmt.Fprintln(w, ui.StyleSectionHeader.Render("Available styles:"))
+	_, _ = fmt.Fprintln(w)
+
+	infos := ai.StyleInfoList()
+	// Measure the longest name for alignment.
+	maxLen := 0
+	for _, s := range infos {
+		if len(s.Name) > maxLen {
+			maxLen = len(s.Name)
+		}
+	}
+
+	defaultStyle := ai.StyleDigest
+	for _, s := range infos {
+		name := string(s.Name)
+		pad := strings.Repeat(" ", maxLen-len(name))
+		label := ui.StyleBold.Render(name) + pad
+		desc := s.Description
+		if s.Name == defaultStyle {
+			desc += " " + ui.StyleMuted.Render("[default]")
+		}
+		_, _ = fmt.Fprintf(w, "  %s   %s\n", label, desc)
+
+		if verbose {
+			_, _ = fmt.Fprintln(w)
+			for _, line := range strings.Split(ai.Prompt(s.Name), "\n") {
+				_, _ = fmt.Fprintf(w, "    %s\n", ui.StyleMuted.Render(line))
+			}
+			_, _ = fmt.Fprintln(w)
+		}
+	}
+
+	_, _ = fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w, ui.StyleMuted.Render("Show full prompt: anker recap --styles --verbose"))
+	_, _ = fmt.Fprintln(w, ui.StyleMuted.Render("Custom styles:   ~/.anker/templates/<name>.txt"))
+	return nil
+}
+
 // resolveLanguage returns the effective output language from flag, config, or "deutsch".
 func resolveLanguage(flagValue, configDefault string) string {
 	if flagValue != "" {
@@ -260,5 +307,7 @@ func init() {
 	recapCmd.Flags().BoolVar(&recapRaw, "raw", false, "Unformatted entry dump -- for pipes, scripts, grep")
 	recapCmd.Flags().BoolVar(&recapJSON, "json", false, "Structured JSON output")
 	recapCmd.Flags().StringVar(&recapStyle, "style", "", "Summary style: brief, digest, status, report, retro")
-	recapCmd.Flags().StringVar(&recapLang, "lang", "", "Output language (e.g. deutsch, english, greek); default: deutsch")
+	recapCmd.Flags().StringVar(&recapLang, "lang", "", "Report language passed to the AI model (e.g. deutsch, english, greek -- use full names, not ISO codes)")
+	recapCmd.Flags().BoolVar(&recapStyles, "styles", false, "List available styles and exit")
+	recapCmd.Flags().BoolVar(&recapVerbose, "verbose", false, "Show full prompt text when used with --styles")
 }
