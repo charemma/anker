@@ -136,7 +136,7 @@ Rules:
 - Name the project: "in ikno", "in nixos-config"
 - Active verbs: "implementiert", "gefixt", "dokumentiert" -- not "gearbeitet an"
 - Do not pad with filler bullets if the data is sparse
-- Use concrete project/repository names from the input data (e.g. "ikno", "nixos-config", "infra"). Never use generic terms like "das Werkzeug", "das Projekt", "das Tool". The reader may work on multiple projects and needs to know which is which.
+- ALWAYS prefix each bullet with the repo/project name in brackets, e.g. "[ikno] renamed module" or "[nixos-config] updated flake". The reader works on multiple projects and must see at a glance which repo each item belongs to. Never write a bullet without a project prefix.
 - Language: {language}`
 
 const promptDigest = `Summarize the developer's activity log as a thematic technical overview.
@@ -173,7 +173,7 @@ Rules:
 - No vague qualifiers: "intensiv", "erfolgreich", "verschiedene", "einige"
 - If something took > 100 claude minutes, mark with "(groesster Zeitblock)"
 - Skip themes with only 1 low-signal obsidian entry and no commits or claude sessions
-- Use concrete project/repository names from the input data (e.g. "ikno", "nixos-config", "infra"). Never use generic terms like "das Werkzeug", "das Projekt", "das Tool". The reader may work on multiple projects and needs to know which is which.
+- ALWAYS prefix each bullet with the repo/project name in brackets, e.g. "[ikno] renamed module" or "[nixos-config] updated flake". The reader works on multiple projects and must see at a glance which repo each item belongs to. Never write a bullet without a project prefix.
 - Language: {language}`
 
 const promptReport = `Write a polished formal report from the developer's activity log.
@@ -205,7 +205,7 @@ Rules:
 - No effort metrics (minutes, commit counts)
 - In-progress work does not appear under "Fortschritt"
 - Translate implementation work: "Renderer umgebaut" -> "verbesserte Ausgabequalitaet"
-- Use concrete project/repository names from the input data (e.g. "ikno", "nixos-config", "infra"). Never use generic terms like "das Werkzeug", "das Projekt", "das Tool". The reader may work on multiple projects and needs to know which is which.
+- ALWAYS prefix each bullet with the repo/project name in brackets, e.g. "[ikno] renamed module" or "[nixos-config] updated flake". The reader works on multiple projects and must see at a glance which repo each item belongs to. Never write a bullet without a project prefix.
 - Language: {language}`
 
 const promptStatus = `Write a progress-focused status update from the developer's activity log.
@@ -238,7 +238,7 @@ Rules:
 - No commit hashes or file paths
 - Keep bullets tight -- no explanations, just facts
 - "in Arbeit" means started but not merged/shipped
-- Use concrete project/repository names from the input data (e.g. "ikno", "nixos-config", "infra"). Never use generic terms like "das Werkzeug", "das Projekt", "das Tool". The reader may work on multiple projects and needs to know which is which.
+- ALWAYS prefix each bullet with the repo/project name in brackets, e.g. "[ikno] renamed module" or "[nixos-config] updated flake". The reader works on multiple projects and must see at a glance which repo each item belongs to. Never write a bullet without a project prefix.
 - Language: {language}`
 
 const promptRetro = `Write a sprint retrospective from the developer's activity log.
@@ -274,7 +274,7 @@ Rules:
 - No commit hashes or file paths
 - Be specific, not generic
 - If there is nothing notable for a section, omit it entirely
-- Use concrete project/repository names from the input data (e.g. "ikno", "nixos-config", "infra"). Never use generic terms like "das Werkzeug", "das Projekt", "das Tool". The reader may work on multiple projects and needs to know which is which.
+- ALWAYS prefix each bullet with the repo/project name in brackets, e.g. "[ikno] renamed module" or "[nixos-config] updated flake". The reader works on multiple projects and must see at a glance which repo each item belongs to. Never write a bullet without a project prefix.
 - Language: {language}`
 
 const promptStats = `Analyze the activity log and produce a work statistics report.
