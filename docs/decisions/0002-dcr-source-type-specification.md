@@ -37,3 +37,14 @@ Users need to specify source type when adding sources. How should this be expres
 We chose **positional argument**: `anker source add git .`
 
 Why: Makes required parameter explicit, follows CLI conventions, extensible.
+
+## Amendment (2026-04-12)
+
+Type is now an optional positional argument. When omitted, type is inferred from detection signals (`.git/`, `.obsidian/`, `.md` files, `.claude/projects/`). Explicit `anker source add git <path>` syntax remains fully supported and is not deprecated.
+
+New invocation forms:
+- `anker source add` -- detect cwd
+- `anker source add ~/path` -- detect ~/path or scan its children
+- `anker source add ~/path --type git` -- force type on a path
+
+The `--type` flag provides an explicit override when auto-detection is ambiguous or wrong.

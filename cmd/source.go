@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/charemma/anker/internal/config"
@@ -18,7 +20,17 @@ var (
 	gitAuthors       []string
 	markdownTags     []string
 	markdownHeadings []string
+	addType          string
+	addYes           bool
 )
+
+// knownTypes is the set of built-in source type identifiers.
+var knownTypes = map[string]bool{
+	"git":      true,
+	"markdown": true,
+	"obsidian": true,
+	"claude":   true,
+}
 
 var sourceCmd = &cobra.Command{
 	Use:   "source",
@@ -37,95 +49,304 @@ Supported types:
   obsidian - Track Obsidian vault file changes
   claude   - Track Claude Code session interactions
 
+With auto-detection:
+  anker source add                      detect and add cwd
+  anker source add ~/path               detect ~/path (or scan children)
+  anker source add git ~/path           explicit type (unchanged)
+  anker source add ~/code --type git    force type on a path
+
 Examples:
+  anker source add
+  anker source add ~/code/my-project
+  anker source add ~/code/charemma      (scans directory children)
   anker source add git .
   anker source add git ~/code/my-project
   anker source add git . --author user@example.com
-  anker source add git . --author foo@work.com --author bar@personal.com
   anker source add markdown ~/Obsidian/Daily
   anker source add markdown ~/notes --tags work,done
   anker source add obsidian ~/Documents/Obsidian
   anker source add claude`,
-	Args: cobra.RangeArgs(1, 2),
+	Args: cobra.RangeArgs(0, 2),
 	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
-			return []string{"git", "markdown", "obsidian", "claude"}, cobra.ShellCompDirectiveNoFileComp
+			// Complete both known types and directories
+			types := []string{"git", "markdown", "obsidian", "claude"}
+			return types, cobra.ShellCompDirectiveNoFileComp | cobra.ShellCompDirectiveFilterDirs
 		}
-		return nil, cobra.ShellCompDirectiveFilterDirs
+		if len(args) == 1 && knownTypes[args[0]] {
+			return nil, cobra.ShellCompDirectiveFilterDirs
+		}
+		return nil, cobra.ShellCompDirectiveNoFileComp
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		sourceType := args[0]
-		path := ""
-		if len(args) > 1 {
-			path = args[1]
-		}
-
 		store, err := storage.NewStore()
 		if err != nil {
 			return fmt.Errorf("failed to initialize storage: %w", err)
 		}
 
-		srcCfg := sources.Config{
-			Type:     sourceType,
-			Path:     path,
-			Metadata: make(map[string]string),
+		sourceType, path, explicit := parseAddArgs(args)
+
+		// Validate ambiguous 2-arg case where first arg is not a known type
+		if len(args) == 2 && !knownTypes[args[0]] {
+			return fmt.Errorf("unrecognized source type %q -- use: anker source add <type> <path> or anker source add <path>", args[0])
 		}
 
-		if path == "" && sourceType != "claude" {
-			return fmt.Errorf("path is required for source type: %s", sourceType)
+		// --type flag overrides auto-detection (only when not already explicit)
+		if !explicit && addType != "" {
+			sourceType = addType
+			explicit = true
 		}
 
-		switch sourceType {
-		case "git":
-			// Use --author flags if provided, otherwise use config, otherwise use git config
-			if len(gitAuthors) > 0 {
-				srcCfg.Metadata["author"] = strings.Join(gitAuthors, ",")
+		if explicit {
+			// Legacy path: type is known, add single source directly
+			return addSingleSource(store, sourceType, path)
+		}
+
+		// Auto-detection path
+		detected, err := sources.DetectType(path)
+		if err != nil {
+			return fmt.Errorf("failed to detect source type: %w", err)
+		}
+
+		if len(detected) > 0 {
+			// Single-path flow
+			return handleDetectedSources(store, detected)
+		}
+
+		// No match at path itself -- scan children
+		registered, err := store.GetSources()
+		if err != nil {
+			return fmt.Errorf("failed to load sources: %w", err)
+		}
+
+		discovered, err := sources.DiscoverSources(path, 1, registered)
+		if err != nil {
+			return fmt.Errorf("failed to scan directory: %w", err)
+		}
+
+		if len(discovered) == 0 {
+			return fmt.Errorf("could not detect source type for %s, use --type to specify", path)
+		}
+
+		return handleDiscoveredBatch(store, discovered)
+	},
+}
+
+// parseAddArgs disambiguates the argument list and returns (sourceType, path, explicit).
+// explicit=true means the user provided the type directly.
+func parseAddArgs(args []string) (sourceType, path string, explicit bool) {
+	switch len(args) {
+	case 0:
+		cwd, _ := os.Getwd()
+		path = cwd
+	case 1:
+		if knownTypes[args[0]] {
+			// legacy: "anker source add claude" or "anker source add git"
+			sourceType = args[0]
+			explicit = true
+		} else {
+			// path with auto-detect
+			path = args[0]
+		}
+	case 2:
+		if knownTypes[args[0]] {
+			// legacy: "anker source add git ~/path"
+			sourceType = args[0]
+			path = args[1]
+			explicit = true
+		}
+		// else: caller handles the error (ambiguous 2-arg case)
+	}
+	return
+}
+
+// handleDetectedSources handles the result of DetectType for a single path.
+func handleDetectedSources(store *storage.Store, detected []sources.DetectedSource) error {
+	if len(detected) == 1 {
+		d := detected[0]
+		fmt.Printf("detected %s: %s (%s)\n", d.Type, d.Path, d.Reason)
+		return addSingleSource(store, d.Type, d.Path)
+	}
+
+	// Multiple matches: prompt unless --yes
+	if addYes {
+		for _, d := range detected {
+			if err := addSingleSource(store, d.Type, d.Path); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	if !isTTY() {
+		return fmt.Errorf("ambiguous source type, use --type to specify")
+	}
+
+	_, _ = fmt.Fprintf(os.Stdout, "Detected multiple source types for %s:\n", detected[0].Path)
+	for i, d := range detected {
+		_, _ = fmt.Fprintf(os.Stdout, "  %d) %-10s (%s)\n", i+1, d.Type, d.Reason)
+	}
+
+	choices := make([]string, len(detected))
+	for i := range detected {
+		choices[i] = fmt.Sprintf("%d", i+1)
+	}
+	choices = append(choices, "all", "none")
+	_, _ = fmt.Fprintf(os.Stdout, "Add which? [%s]: ", strings.Join(choices, "/"))
+
+	answer := readLine()
+	answer = strings.TrimSpace(strings.ToLower(answer))
+
+	switch answer {
+	case "none", "":
+		fmt.Println("no sources added")
+		return nil
+	case "all":
+		for _, d := range detected {
+			if err := addSingleSource(store, d.Type, d.Path); err != nil {
+				return err
+			}
+		}
+		return nil
+	default:
+		// Try to match a number
+		for i, d := range detected {
+			if answer == fmt.Sprintf("%d", i+1) {
+				return addSingleSource(store, d.Type, d.Path)
+			}
+		}
+		return fmt.Errorf("invalid choice %q", answer)
+	}
+}
+
+// handleDiscoveredBatch handles batch confirmation for directory scanning results.
+func handleDiscoveredBatch(store *storage.Store, discovered []sources.DetectedSource) error {
+	// Group by type for display
+	fmt.Printf("Found %d source(s):\n", len(discovered))
+	for _, d := range discovered {
+		fmt.Printf("  %-10s %s\n", d.Type, d.Path)
+	}
+
+	if addYes {
+		return addAll(store, discovered)
+	}
+
+	if !isTTY() {
+		return fmt.Errorf("interactive confirmation required, use --yes to skip")
+	}
+
+	_, _ = fmt.Fprintf(os.Stdout, "Add all? [Y/n]: ")
+	answer := readLine()
+	answer = strings.TrimSpace(strings.ToLower(answer))
+
+	if answer == "" || answer == "y" || answer == "yes" {
+		return addAll(store, discovered)
+	}
+
+	// Item-by-item confirmation
+	for _, d := range discovered {
+		_, _ = fmt.Fprintf(os.Stdout, "Add %s %s? [y/n/quit]: ", d.Type, d.Path)
+		ans := strings.TrimSpace(strings.ToLower(readLine()))
+		switch ans {
+		case "y", "yes":
+			if err := addSingleSource(store, d.Type, d.Path); err != nil {
+				return err
+			}
+		case "quit", "q":
+			return nil
+		}
+	}
+
+	return nil
+}
+
+// addAll adds every discovered source without prompting.
+func addAll(store *storage.Store, discovered []sources.DetectedSource) error {
+	for _, d := range discovered {
+		if err := addSingleSource(store, d.Type, d.Path); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// addSingleSource validates and stores a single source config.
+func addSingleSource(store *storage.Store, sourceType, path string) error {
+	srcCfg := sources.Config{
+		Type:     sourceType,
+		Path:     path,
+		Metadata: make(map[string]string),
+	}
+
+	if path == "" && sourceType != "claude" {
+		return fmt.Errorf("path is required for source type: %s", sourceType)
+	}
+
+	switch sourceType {
+	case "git":
+		if len(gitAuthors) > 0 {
+			srcCfg.Metadata["author"] = strings.Join(gitAuthors, ",")
+		} else {
+			cfg, err := config.Load()
+			if err == nil && cfg.AuthorEmail != "" {
+				srcCfg.Metadata["author"] = cfg.AuthorEmail
 			} else {
-				// Fallback to anker config if available
-				cfg, err := config.Load()
-				if err == nil && cfg.AuthorEmail != "" {
-					srcCfg.Metadata["author"] = cfg.AuthorEmail
+				if email, err := git.GetAuthorEmail(); err == nil && email != "" {
+					srcCfg.Metadata["author"] = email
+					_, _ = fmt.Printf("using git user.email: %s\n", email)
 				} else {
-					// Final fallback: git config --global user.email
-					if email, err := git.GetAuthorEmail(); err == nil && email != "" {
-						srcCfg.Metadata["author"] = email
-						_, _ = fmt.Printf("using git user.email: %s\n", email)
-					} else {
-						_, _ = fmt.Println(ui.StyleMuted.Render("warning: no author email configured - will track ALL commits in this repo"))
-						_, _ = fmt.Println(ui.StyleMuted.Render("  set author with: --author your@email.com"))
-						_, _ = fmt.Println(ui.StyleMuted.Render("  or configure git: git config --global user.email your@email.com"))
-					}
+					_, _ = fmt.Println(ui.StyleMuted.Render("warning: no author email configured - will track ALL commits in this repo"))
+					_, _ = fmt.Println(ui.StyleMuted.Render("  set author with: --author your@email.com"))
+					_, _ = fmt.Println(ui.StyleMuted.Render("  or configure git: git config --global user.email your@email.com"))
 				}
 			}
-		case "markdown":
-			if len(markdownTags) > 0 {
-				srcCfg.Metadata["tags"] = strings.Join(markdownTags, ",")
-			}
-			if len(markdownHeadings) > 0 {
-				srcCfg.Metadata["headings"] = strings.Join(markdownHeadings, ",")
-			}
-		case "obsidian":
-			// Obsidian source has no additional metadata for now
-		case "claude":
-			if path == "" {
-				path = claudesource.DefaultClaudeHome()
-			}
+		}
+	case "markdown":
+		if len(markdownTags) > 0 {
+			srcCfg.Metadata["tags"] = strings.Join(markdownTags, ",")
+		}
+		if len(markdownHeadings) > 0 {
+			srcCfg.Metadata["headings"] = strings.Join(markdownHeadings, ",")
+		}
+	case "obsidian":
+		// no additional metadata
+	case "claude":
+		if path == "" {
+			path = claudesource.DefaultClaudeHome()
 			srcCfg.Path = path
-		default:
-			return fmt.Errorf("unsupported source type: %s (supported: git, markdown, obsidian, claude)", sourceType)
 		}
+	default:
+		return fmt.Errorf("unsupported source type: %s (supported: git, markdown, obsidian, claude)", sourceType)
+	}
 
-		if err := store.AddSource(srcCfg); err != nil {
-			return fmt.Errorf("failed to add source: %w", err)
-		}
+	if err := store.AddSource(srcCfg); err != nil {
+		return fmt.Errorf("failed to add source: %w", err)
+	}
 
-		typeStyled := lipgloss.NewStyle().Foreground(ui.SourceColor(sourceType)).Render(sourceType)
-		_, _ = fmt.Printf("%s %s source: %s\n",
-			ui.StyleSuccess.Render("added"),
-			typeStyled,
-			srcCfg.Path)
-		return nil
-	},
+	typeStyled := lipgloss.NewStyle().Foreground(ui.SourceColor(sourceType)).Render(sourceType)
+	_, _ = fmt.Printf("%s %s source: %s\n",
+		ui.StyleSuccess.Render("added"),
+		typeStyled,
+		srcCfg.Path)
+	return nil
+}
+
+// isTTY reports whether stdout is a terminal.
+func isTTY() bool {
+	info, err := os.Stdout.Stat()
+	if err != nil {
+		return false
+	}
+	return (info.Mode() & os.ModeCharDevice) != 0
+}
+
+// readLine reads a single line from stdin.
+func readLine() string {
+	scanner := bufio.NewScanner(os.Stdin)
+	if scanner.Scan() {
+		return scanner.Text()
+	}
+	return ""
 }
 
 var sourceListCmd = &cobra.Command{
@@ -174,7 +395,6 @@ var sourceRemoveCmd = &cobra.Command{
 		var sourceType, path string
 
 		if len(args) == 1 {
-			// Only path provided - find source by path
 			path = args[0]
 			removed, err := store.RemoveSourceByPath(path)
 			if err != nil {
@@ -186,7 +406,6 @@ var sourceRemoveCmd = &cobra.Command{
 				typeStyled,
 				removed.Path)
 		} else {
-			// Type and path provided
 			sourceType = args[0]
 			path = args[1]
 			if err := store.RemoveSource(sourceType, path); err != nil {
@@ -212,4 +431,6 @@ func init() {
 	sourceAddCmd.Flags().StringSliceVar(&gitAuthors, "author", nil, "Git author email(s) to filter commits (can be specified multiple times)")
 	sourceAddCmd.Flags().StringSliceVar(&markdownTags, "tags", nil, "Filter markdown by tags (comma-separated)")
 	sourceAddCmd.Flags().StringSliceVar(&markdownHeadings, "headings", nil, "Filter markdown by headings (comma-separated)")
+	sourceAddCmd.Flags().StringVarP(&addType, "type", "t", "", "Force source type (overrides auto-detection)")
+	sourceAddCmd.Flags().BoolVarP(&addYes, "yes", "y", false, "Skip interactive confirmation, add all discovered sources")
 }

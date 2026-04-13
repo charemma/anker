@@ -36,3 +36,9 @@ Users work across multiple repos/sources. How should anker know what to track?
 We chose **explicit registration**.
 
 Why: Privacy, predictability, aligns with "explicit over implicit" principle.
+
+## Amendment (2026-04-12)
+
+Auto-detection and directory scanning are fully compatible with explicit registration. The user still initiates every `source add` invocation -- the tool infers the type and discovers candidates within a path. No background discovery. No implicit tracking. The privacy principle is preserved.
+
+`anker source add ~/code` scans children and prompts before adding anything. `anker init` presents candidates and requires confirmation. Nothing is added without explicit user action.
