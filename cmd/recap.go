@@ -181,9 +181,61 @@ Examples:
 	},
 }
 
-// loadCustomTemplate looks for ~/.anker/templates/<name>.md and returns its
-// contents with {language} injected. Returns (prompt, true, nil) if found,
-// ("", false, nil) if not found, or ("", false, err) on read errors.
+// parsedTemplate holds the result of parsing a .md template file.
+type parsedTemplate struct {
+	Description string
+	Body        string
+}
+
+// parseTemplateFile extracts the YAML frontmatter description and prompt body
+// from a .md template file. The expected format is:
+//
+//	---
+//	description: Short description shown in --styles
+//	---
+//
+//	## Prompt
+//
+//	Prompt text here...
+//
+// Frontmatter and the optional "## Prompt" heading are stripped from the body.
+// Files without frontmatter are returned as-is with an empty description.
+func parseTemplateFile(data []byte) parsedTemplate {
+	s := string(data)
+
+	var description, body string
+
+	if strings.HasPrefix(s, "---\n") {
+		end := strings.Index(s[4:], "\n---\n")
+		if end != -1 {
+			frontmatter := s[4 : end+4]
+			body = strings.TrimSpace(s[end+4+5:]) // skip past closing "\n---\n"
+
+			for _, line := range strings.Split(frontmatter, "\n") {
+				line = strings.TrimSpace(line)
+				if strings.HasPrefix(line, "description:") {
+					description = strings.TrimSpace(strings.TrimPrefix(line, "description:"))
+					description = strings.Trim(description, `"'`)
+				}
+			}
+		} else {
+			body = s
+		}
+	} else {
+		body = s
+	}
+
+	// Strip optional "## Prompt" section heading.
+	if strings.HasPrefix(body, "## Prompt\n") {
+		body = strings.TrimSpace(strings.TrimPrefix(body, "## Prompt\n"))
+	}
+
+	return parsedTemplate{Description: description, Body: body}
+}
+
+// loadCustomTemplate looks for ~/.anker/templates/<name>.md, parses its
+// frontmatter, and returns the prompt body with {language} injected.
+// Returns (prompt, true, nil) if found, ("", false, nil) if not found.
 func loadCustomTemplate(name, lang string) (string, bool, error) {
 	home, err := paths.GetAnkerHome()
 	if err != nil {
@@ -197,18 +249,18 @@ func loadCustomTemplate(name, lang string) (string, bool, error) {
 		}
 		return "", false, err
 	}
-	prompt := strings.ReplaceAll(string(data), "{language}", lang)
+	tmpl := parseTemplateFile(data)
+	prompt := strings.ReplaceAll(tmpl.Body, "{language}", lang)
 	return prompt, true, nil
 }
 
 // runListStyles prints all available styles to w.
-// If verbose is true, the full prompt text for each style is also shown.
+// If verbose is true, the full prompt body for each style is also shown.
 func runListStyles(w *os.File, verbose bool) error {
 	_, _ = fmt.Fprintln(w, ui.StyleSectionHeader.Render("Available styles:"))
 	_, _ = fmt.Fprintln(w)
 
 	infos := ai.StyleInfoList()
-	// Measure the longest name for alignment.
 	maxLen := 0
 	for _, s := range infos {
 		if len(s.Name) > maxLen {
@@ -236,28 +288,51 @@ func runListStyles(w *os.File, verbose bool) error {
 		}
 	}
 
-	_, _ = fmt.Fprintln(w)
-
 	// List custom templates if any exist.
 	if home, err := paths.GetAnkerHome(); err == nil {
 		tmplDir := filepath.Join(home, "templates")
 		if entries, err := os.ReadDir(tmplDir); err == nil {
-			var custom []string
+			type customEntry struct {
+				name string
+				tmpl parsedTemplate
+			}
+			var customs []customEntry
 			for _, e := range entries {
-				if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") {
-					custom = append(custom, strings.TrimSuffix(e.Name(), ".md"))
+				if e.IsDir() || !strings.HasSuffix(e.Name(), ".md") {
+					continue
+				}
+				name := strings.TrimSuffix(e.Name(), ".md")
+				if data, err := os.ReadFile(filepath.Join(tmplDir, e.Name())); err == nil {
+					customs = append(customs, customEntry{name, parseTemplateFile(data)})
 				}
 			}
-			if len(custom) > 0 {
-				_, _ = fmt.Fprintln(w, ui.StyleMuted.Render("Custom styles:"))
-				for _, name := range custom {
-					_, _ = fmt.Fprintf(w, "  %s\n", ui.StyleMuted.Render(name))
-				}
+			if len(customs) > 0 {
 				_, _ = fmt.Fprintln(w)
+				_, _ = fmt.Fprintln(w, ui.StyleSectionHeader.Render("Custom styles:"))
+				_, _ = fmt.Fprintln(w)
+				customMax := 0
+				for _, c := range customs {
+					if len(c.name) > customMax {
+						customMax = len(c.name)
+					}
+				}
+				for _, c := range customs {
+					pad := strings.Repeat(" ", customMax-len(c.name))
+					label := ui.StyleBold.Render(c.name) + pad
+					_, _ = fmt.Fprintf(w, "  %s   %s\n", label, c.tmpl.Description)
+					if verbose && c.tmpl.Body != "" {
+						_, _ = fmt.Fprintln(w)
+						for _, line := range strings.Split(c.tmpl.Body, "\n") {
+							_, _ = fmt.Fprintf(w, "    %s\n", ui.StyleMuted.Render(line))
+						}
+						_, _ = fmt.Fprintln(w)
+					}
+				}
 			}
 		}
 	}
 
+	_, _ = fmt.Fprintln(w)
 	_, _ = fmt.Fprintln(w, ui.StyleMuted.Render("Show full prompt: anker recap --styles --verbose"))
 	_, _ = fmt.Fprintln(w, ui.StyleMuted.Render("Add custom style: ~/.anker/templates/<name>.md"))
 	return nil
