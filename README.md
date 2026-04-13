@@ -80,7 +80,7 @@ $ ikno recap thisweek --style retro
 
 ## Install
 
-**Quick install:**
+**Quick install** (installs to `~/.local/bin`):
 ```bash
 curl -sSL https://charemma.de/ikno/install.sh | sh
 ```
