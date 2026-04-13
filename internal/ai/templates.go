@@ -303,7 +303,7 @@ Organizing           █░░░░░░░░░░░░░░░░░░�
 One sentence characterizing the day/week.
 
 Rules:
-- 4-6 categories, derived from the data
+- 4-6 categories, use broad work-type categories (e.g. Coding, Architecture, Documentation, Research, DevOps, Communication) -- NOT task-specific labels like "Rename to X" or "Report Testing"
 - Bars exactly 20 chars wide using block chars
 - Each line must fit in 72 chars -- no wrapping, no tables
 - Category name left, then bar, then percentage

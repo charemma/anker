@@ -106,7 +106,9 @@ func Transform(ctx context.Context, w io.Writer, renderedText string, period str
 	_, _ = fmt.Fprintln(w)
 
 	aiText := aiOut.String()
-	if isatty.IsTerminal(os.Stdout.Fd()) {
+	// Stats style has pre-formatted ASCII bars -- glamour would break the layout.
+	// Only glamour-render prose styles (digest, report, brief, etc.)
+	if isatty.IsTerminal(os.Stdout.Fd()) && cfg.Style != "stats" {
 		rendered, renderErr := glamour.Render(aiText, "auto")
 		if renderErr == nil {
 			_, _ = fmt.Fprint(w, rendered)
