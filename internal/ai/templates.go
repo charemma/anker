@@ -159,7 +159,7 @@ git -- a commit message. High-signal, always include.
 
 ## Output format
 
-Write in {language}. No preamble. Start directly with the first bullet.
+Write EVERYTHING in {language} -- all headings, all bullets, all text. No exceptions. No preamble. Start directly with the first bullet.
 
 Structure:
 - One section per theme (no heading, just bullets grouped together)
@@ -188,7 +188,7 @@ git -- commit message. Translate to outcome language. Merged/shipped work only.
 
 ## Output structure
 
-Write in {language}. Formal tone. No internal jargon, no tool names unless relevant.
+Write EVERYTHING in {language} -- all headings, all bullets, all text. No exceptions. Formal tone. No internal jargon, no tool names unless relevant.
 
 ### Fortschritt
 2-4 bullets. Completed items only. Format: "<was abgeschlossen> -- <Mehrwert oder Ergebnis>"
@@ -220,17 +220,17 @@ git -- commit message. Always relevant. Group by repo.
 
 ## Output format
 
-Write in {language}. Focus on what is done, what is blocked, and what comes next.
+Write EVERYTHING in {language} -- all headings, all bullets, all text. No exceptions. Focus on what is done, what is blocked, and what comes next.
 
-### Fortschritt
+### Progress
 3-5 bullets. Completed and in-progress work. Both matter here.
-Format: "<was> -- <aktueller Stand: abgeschlossen / in Arbeit>"
+Format: "<what> -- <status: completed / in progress>"
 
-### Blocker
+### Blockers
 0-3 bullets. Unresolved dependencies, open decisions, missing input.
 If none visible in the data, omit this section.
 
-### Naechste Schritte
+### Next Steps
 2-4 bullets. Concrete next actions based on open work in the data.
 One bullet = one specific action, not a theme.
 
@@ -253,7 +253,7 @@ git -- commit message. Always relevant. Group by repo.
 
 ## Output format
 
-Write in {language}. Structured retrospective format.
+Write EVERYTHING in {language} -- all headings, all bullets, all text. No exceptions. Structured retrospective format.
 
 ### Was lief gut
 2-4 bullets. Things that went smoothly, clear wins, good decisions made.
@@ -278,7 +278,7 @@ Rules:
 - Language: {language}`
 
 const promptStats = `Analyze the activity log and produce a work statistics report.
-Write in {language}.
+Write EVERYTHING in {language} -- all headings, all bullets, all text. No exceptions.
 
 Use this exact format (no tables, no pipe characters):
 
