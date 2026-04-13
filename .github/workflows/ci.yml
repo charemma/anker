@@ -34,3 +34,28 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - run: nix build .#checks.x86_64-linux.lint
+
+  auto-tag:
+    name: Auto Tag
+    needs: [build, test, lint]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create daily tag
+        run: |
+          DATE=$(date -u +%Y.%m.%d)
+          # Check if tag already exists, add suffix if so
+          TAG="v${DATE}"
+          COUNTER=0
+          while git rev-parse "${TAG}" >/dev/null 2>&1; do
+            COUNTER=$((COUNTER + 1))
+            TAG="v${DATE}.${COUNTER}"
+          done
+          git tag "${TAG}"
+          git push origin "${TAG}"
+          echo "Tagged: ${TAG}"
