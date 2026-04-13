@@ -7,36 +7,37 @@ From git, notes, and AI sessions -- in one command.
 ---
 
 ```
-$ ikno recap thisweek
+$ ikno recap today --style stats
 
-Week 15  (7-11 April)   24 activities across 4 sources
+# 2026-04-13 -- 73 activities
 
-Monday, 7 April         3 activities
+## Categories
 
-  git/ikno      2 commits  (1 feat, 1 fix)
-  claude        1 session  smart-source-detection
+Coding               ███████░░░░░░░░░░░░░  37%  (27)
+  ikno rename, prompt templates, merge PR
 
-Tuesday, 8 April        5 activities
+AI/Prompt Design     █████░░░░░░░░░░░░░░░  26%  (19)
+  Style testing, template iteration
 
-  git/ikno      3 commits  (1 feat, 2 test)
-  git/nixos     1 commit   (1 chore)
-  obsidian      1 note
+Branding             ████░░░░░░░░░░░░░░░░  21%  (15)
+  Logo design, naming research (ikno)
 
-Wednesday, 9 April      -
+Documentation        ██░░░░░░░░░░░░░░░░░░  11%  (8)
+  README rewrite, ADR updates, vault notes
 
-Thursday, 10 April      8 activities
+DevOps               █░░░░░░░░░░░░░░░░░░░   5%  (4)
+  CI auto-tag, nix flake fixes
 
-  git/ikno      4 commits  (2 feat, 1 refactor, 1 fix)   +892 -234
-  git/dotfiles  2 commits  (1 feat, 1 chore)             +47 -12
-  obsidian      2 notes
+## Work Types
 
-Friday, 11 April        8 activities
+Building             ███████████░░░░░░░░░  55%
+Thinking             ███████░░░░░░░░░░░░░  33%
+Organizing           ██░░░░░░░░░░░░░░░░░░  12%
 
-  git/ikno      3 commits  (1 feat, 1 docs, 1 fix)
-  claude        2 sessions
-  obsidian      3 notes
+## Summary
 
-24 entries · ikno (12), nixos (1), dotfiles (2), claude (3), obsidian (6)
+Full rebrand day: renamed anker to ikno, built a prompt template
+system with 6 styles, and iterated on logo/naming.
 ```
 
 ---
