@@ -80,6 +80,11 @@ $ ikno recap thisweek --style retro
 
 ## Install
 
+**Quick install:**
+```bash
+curl -sSL https://charemma.de/ikno/install.sh | sh
+```
+
 **Nix:**
 ```bash
 nix run github:charemma/ikno
