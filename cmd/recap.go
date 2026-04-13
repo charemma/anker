@@ -44,11 +44,11 @@ Time specifications:
   last 7 days      Relative range
 
 Output styles (--style):
-  self             Personal technical recap -- default
-  manager          1:1 meeting preparation
-  customer         Professional status update for clients
-  standup          Daily standup (defaults to yesterday)
-  retro            Sprint retrospective
+  summary          Short overview, bullet points -- default
+  detailed         Comprehensive, all topics, more context
+  standup          Gestern/heute/blocker, minimal (defaults to yesterday)
+  narrative        Flowing prose, email-ready
+  report           Formal status report, professional tone
 
 Output modes:
   (default)        AI-generated summary (requires AI backend)
@@ -59,7 +59,7 @@ Examples:
   anker recap
   anker recap today
   anker recap thisweek
-  anker recap thisweek --style manager
+  anker recap thisweek --style detailed
   anker recap --style standup
   anker recap lastweek --raw | grep feat
   anker recap 2025-12-01..2025-12-31 --json`,
@@ -171,7 +171,7 @@ func resolveStyle(flagValue, configDefault string) ai.Style {
 	if configDefault != "" {
 		return ai.Style(strings.ToLower(configDefault))
 	}
-	return ai.StyleSelf
+	return ai.StyleSummary
 }
 
 // filterByStyle removes entries whose source type is not allowed for the given style.
@@ -244,5 +244,5 @@ func init() {
 	recapCmd.Flags().StringVar(&recapAPIKey, "api-key", "", "API key for AI summary")
 	recapCmd.Flags().BoolVar(&recapRaw, "raw", false, "Unformatted entry dump -- for pipes, scripts, grep")
 	recapCmd.Flags().BoolVar(&recapJSON, "json", false, "Structured JSON output")
-	recapCmd.Flags().StringVar(&recapStyle, "style", "", "Summary style: self, manager, customer, standup, retro")
+	recapCmd.Flags().StringVar(&recapStyle, "style", "", "Summary style: summary, detailed, standup, narrative, report")
 }

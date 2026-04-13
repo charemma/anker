@@ -2,24 +2,24 @@ package ai
 
 import "slices"
 
-// Style identifies a prompt template for a specific audience.
+// Style identifies a prompt template by output format.
 type Style string
 
 const (
-	StyleSelf     Style = "self"
-	StyleManager  Style = "manager"
-	StyleCustomer Style = "customer"
-	StyleStandup  Style = "standup"
-	StyleRetro    Style = "retro"
+	StyleSummary   Style = "summary"   // short overview, bullet points
+	StyleDetailed  Style = "detailed"  // comprehensive, all topics, more context
+	StyleStandup   Style = "standup"   // gestern/heute/blocker, minimal
+	StyleNarrative Style = "narrative" // flowing prose, email-ready
+	StyleReport    Style = "report"    // formal status report, professional tone
 )
 
 // validStyles is the exhaustive list of built-in style identifiers.
 var validStyles = []Style{
-	StyleSelf,
-	StyleManager,
-	StyleCustomer,
+	StyleSummary,
+	StyleDetailed,
 	StyleStandup,
-	StyleRetro,
+	StyleNarrative,
+	StyleReport,
 }
 
 // IsValidStyle reports whether s is a known built-in style.
@@ -39,16 +39,11 @@ func ValidStyleNames() []string {
 // AllowedSources returns the source types included for a given style.
 // An empty slice means all sources are passed through unfiltered.
 func AllowedSources(style Style) []string {
-	switch style {
-	case StyleCustomer:
-		// Customer reports show only git commits -- no internal notes or AI sessions.
-		return []string{"git"}
-	case StyleStandup:
-		// Standup includes git and claude sessions; obsidian is low-signal for daily standups.
+	if style == StyleStandup {
+		// Standup only needs commits and AI sessions -- no vault file changes.
 		return []string{"git", "claude"}
-	default:
-		return nil
 	}
+	return nil
 }
 
 // DefaultTimespec returns the default time specification for a style.
@@ -63,20 +58,20 @@ func DefaultTimespec(style Style) string {
 // Prompt returns the built-in German prompt for the given style.
 func Prompt(style Style) string {
 	switch style {
-	case StyleManager:
-		return promptManager
-	case StyleCustomer:
-		return promptCustomer
+	case StyleDetailed:
+		return promptDetailed
 	case StyleStandup:
 		return promptStandup
-	case StyleRetro:
-		return promptRetro
+	case StyleNarrative:
+		return promptNarrative
+	case StyleReport:
+		return promptReport
 	default:
-		return promptSelf
+		return promptSummary
 	}
 }
 
-const promptSelf = `Summarize the developer's activity log as a personal technical recap. No audience -- this is for the developer reading their own notes.
+const promptSummary = `Summarize the developer's activity log as a short technical overview.
 
 ## How to read the input
 
@@ -111,75 +106,43 @@ Rules:
 - If something took > 100 claude minutes, mark with "(groesster Zeitblock)"
 - Skip themes with only 1 low-signal obsidian entry and no commits or claude sessions`
 
-const promptManager = `Summarize the developer's activity log to prepare for a 1:1 meeting with a manager.
+const promptDetailed = `Write a comprehensive summary of the developer's activity log. Cover all notable themes with full context.
 
 ## How to read the input
 
 Each line: DATE SOURCE: CONTENT
 
-obsidian -- file modified, no content. Decode the path for topic:
-  - 1 Projects/ = active project
-  - 2 Areas/ = ongoing responsibility
-  - 3 Resources/ = research
+obsidian -- file modified, no content. Decode the path:
+  - 1 Projects/<name>/ = active project work
+  - 2 Areas/<topic>/ = ongoing responsibility
+  - 3 Resources/<topic>/ = research or learning
+  - Journal/ = daily journal -- low signal, skip unless dense activity
 
-claude -- AI session: [project] snippet -- N turns, M min. Low weight if < 3 turns or < 5 min.
+claude -- AI session: [project] snippet -- N turns, M min
+  - Under 3 turns or under 5 min = noise, skip
+  - Long sessions (> 60 min) = significant effort, always mention
 
-git -- commit message. High confidence, always relevant.
+git -- commit message. Always include. Group by repo.
 
-## Output structure
+## Output format
 
-Write in German. Three sections:
+Write in German. Cover every theme with activity -- do not skip minor ones.
 
-### Was lief gut
-2-4 bullets. Completed work with concrete outcome. Format: "<was> -- <ergebnis oder status>"
-State outcomes, not just activities ("Feature geliefert", not "an Feature gearbeitet").
+Structure per theme:
+  ### <Theme name>
+  2-5 bullets. What was done, in what context, what the outcome was.
+  Add a "Status:" line at the end: fertig / in Arbeit / blockiert
 
-### Wo brauche ich Unterstuetzung
-1-3 bullets. Open items, blockers, or unresolved decisions visible in the data.
-If nothing is visible, write: "Kein aktueller Blocker erkennbar."
-
-### Naechste Woche
-1-2 bullets. What is clearly in-progress or started but not finished.
-If nothing is obvious from the data, write: "Offen -- muss noch priorisiert werden."
-
-Rules:
-- No passive voice. Active verbs only.
-- Name the project or tool, not a generic theme
-- No commit hashes or file paths in output
-- Do not invent blockers or next steps that are not visible in the data
-- Language: German`
-
-const promptCustomer = `Summarize the developer's activity log as a professional status update for a customer or external stakeholder.
-
-## How to read the input
-
-Each line: DATE SOURCE: CONTENT
-
-git -- commit message. Translate technical terms into customer-readable language.
-
-## Output structure
-
-Write in German. Professional tone -- no internal jargon, no repo names, no tool names unless customer-facing.
-
-### Geliefert
-2-4 bullets. Completed deliverables only. Describe the outcome and value, not the technical implementation.
-Format: "<was wurde gebaut/fertiggestellt> -- <warum das wichtig ist>"
-
-### Projektstand
-2-3 sentences. Current state of the main project. What phase, what is working, what is in progress.
-
-### Naechste Schritte
-2-3 bullets. What comes next. No vague placeholders like "weitere Entwicklung".
+Final section "Offene Punkte" (omit if none):
+  List unresolved items or open branches visible from the data.
 
 Rules:
-- Do not mention commit hashes, file paths, or internal tool names (git, Obsidian, Claude)
-- Do not mention effort in minutes or commit counts
-- Translate technical outcomes: "refactored the renderer" -> "verbesserte Ausgabequalitaet und Stabilitaet"
-- If a feature is in-progress but not done, do not list it under "Geliefert"
-- Omit research and internal tooling work that has no direct customer impact
+- No vague summaries: be specific about what changed or was decided
+- Do not list commit hashes or file paths
+- If a claude session dominated (> 100 min), describe the topic and duration
 - Language: German`
 
-const promptStandup = `Summarize the activity log for a daily standup. Audience: teammates who know the projects. Keep it tight.
+const promptStandup = `Summarize the activity log for a daily standup. Keep it tight.
 
 ## How to read the input
 
@@ -209,43 +172,60 @@ Rules:
 - Active verbs: "implementiert", "gefixt", "dokumentiert" -- not "gearbeitet an"
 - Do not pad with filler bullets if the data is sparse`
 
-const promptRetro = `Summarize the developer's activity log for a sprint retrospective.
-Goal: honest reflection, not a highlight reel.
+const promptNarrative = `Write the developer's activity as a flowing prose summary -- readable as an email or message.
 
 ## How to read the input
 
 Each line: DATE SOURCE: CONTENT
 
-obsidian -- file modified. Decode path: 1 Projects/, 3 Resources/, etc. No content available.
-claude -- AI session: [project] snippet -- N turns, M min
-  - Long sessions (> 60 min) may indicate a hard problem or rabbit hole
-  - Short sessions (< 5 min) likely noise
+obsidian -- file modified. Use the path to infer topic. No content available.
+claude -- AI session: [project] snippet -- N turns, M min. Skip short sessions (< 3 turns or < 5 min).
+git -- commit message. Always relevant.
 
-git -- commit message. Pattern: many small commits = iterative; few large commits = batched work.
+## Output format
+
+Write in German as connected prose. No bullet lists, no section headings.
+
+Structure:
+- Opening sentence: overall theme of the period (1 sentence)
+- Body: 2-4 paragraphs, one per major topic. Each paragraph covers what was done, why it matters, and current status.
+- Closing: 1-2 sentences on what comes next or what is still open.
+
+Rules:
+- Write in first person ("Ich habe...", "Diese Woche...")
+- No commit hashes, file paths, or internal tool names in the output
+- Translate technical work into readable language -- "einen Bug in der Zeitraum-Erkennung behoben" not "fixed parse edge case"
+- Do not list everything -- synthesize into a coherent narrative
+- Length: 150-250 words
+- Language: German`
+
+const promptReport = `Write a formal status report from the developer's activity log.
+
+## How to read the input
+
+Each line: DATE SOURCE: CONTENT
+
+obsidian -- file modified. Decode path for context.
+claude -- AI session: [project] snippet -- N turns, M min. Low weight if < 3 turns or < 5 min.
+git -- commit message. Translate to non-technical outcome language.
 
 ## Output structure
 
-Write in German. Four sections:
+Write in German. Formal tone. No internal jargon, no tool names unless relevant.
 
-### Was gut lief
-2-4 bullets. Things completed, decisions made, good patterns visible in the data.
-Format: "<was> -- <warum das gut war>"
+### Fortschritt
+2-4 bullets. Completed items only. Format: "<was abgeschlossen> -- <Mehrwert oder Ergebnis>"
+Describe outcomes and value, not implementation details.
 
-### Was nicht so gut lief
-2-4 bullets. Rough spots visible in the data: repeated fixes, long unresolved sessions, context switching.
-If nothing negative is visible, write 1-2 bullets about what is still uncertain or unfinished.
-Do not invent problems that are not signaled in the data.
+### Aktueller Stand
+2-3 sentences. Current project state: what phase, what works, what is in progress.
 
-### Zeitverteilung
-1-2 sentences. Where did the bulk of time actually go? Be honest -- if research dominated over delivery, say so.
-If a claude session > 200 min, name the topic explicitly.
-
-### Learnings / Naechstes Mal
-2-3 bullets. Concrete takeaways based on the patterns above. Actionable, not generic ("besser kommunizieren").
-Format: "Beim naechsten Mal: <was genau>"
+### Naechste Schritte
+2-3 bullets. Concrete next items. No vague placeholders.
 
 Rules:
-- Active voice throughout
-- "Was nicht gut lief" must not be empty -- retrospectives require honest reflection
-- Do not mention commit hashes or file paths
+- No commit hashes, file paths, or internal tool names (git, Obsidian, Claude)
+- No effort metrics (minutes, commit counts)
+- In-progress work does not appear under "Fortschritt"
+- Translate implementation work: "Renderer umgebaut" -> "verbesserte Ausgabequalitaet"
 - Language: German`
