@@ -46,6 +46,7 @@ Time specifications:
 Output styles (--style):
   brief            Done/Next/Blocker, tight, max 12 lines (defaults to yesterday)
   digest           Thematic overview, all sources -- default
+  status           Progress/Blocker/Next, progress-focused
   report           Polished formal report, deliveries
   retro            Retrospective: good/bad/learnings
 
@@ -243,5 +244,5 @@ func init() {
 	recapCmd.Flags().StringVar(&recapAPIKey, "api-key", "", "API key for AI summary")
 	recapCmd.Flags().BoolVar(&recapRaw, "raw", false, "Unformatted entry dump -- for pipes, scripts, grep")
 	recapCmd.Flags().BoolVar(&recapJSON, "json", false, "Structured JSON output")
-	recapCmd.Flags().StringVar(&recapStyle, "style", "", "Summary style: brief, digest, report, retro")
+	recapCmd.Flags().StringVar(&recapStyle, "style", "", "Summary style: brief, digest, status, report, retro")
 }

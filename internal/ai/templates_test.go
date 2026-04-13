@@ -15,6 +15,7 @@ func TestIsValidStyle(t *testing.T) {
 		{"digest", true},
 		{"report", true},
 		{"retro", true},
+		{"status", true},
 		{"unknown", false},
 		{"", false},
 		{"BRIEF", false}, // case-sensitive
@@ -28,10 +29,10 @@ func TestIsValidStyle(t *testing.T) {
 
 func TestValidStyleNames(t *testing.T) {
 	names := ValidStyleNames()
-	if len(names) != 4 {
-		t.Fatalf("expected 4 style names, got %d", len(names))
+	if len(names) != 5 {
+		t.Fatalf("expected 5 style names, got %d", len(names))
 	}
-	want := map[string]bool{"brief": true, "digest": true, "report": true, "retro": true}
+	want := map[string]bool{"brief": true, "digest": true, "report": true, "retro": true, "status": true}
 	for _, name := range names {
 		if !want[name] {
 			t.Errorf("unexpected style name %q", name)
@@ -48,6 +49,7 @@ func TestDefaultTimespec(t *testing.T) {
 		{StyleDigest, "today"},
 		{StyleReport, "today"},
 		{StyleRetro, "today"},
+		{StyleStatus, "today"},
 	}
 	for _, tt := range tests {
 		if got := DefaultTimespec(tt.style); got != tt.want {
@@ -93,6 +95,15 @@ func TestAllowedSources(t *testing.T) {
 		},
 		{
 			StyleRetro,
+			[]sources.Entry{
+				{Source: "git"},
+				{Source: "obsidian"},
+				{Source: "claude"},
+			},
+			3, // no filter
+		},
+		{
+			StyleStatus,
 			[]sources.Entry{
 				{Source: "git"},
 				{Source: "obsidian"},

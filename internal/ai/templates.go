@@ -10,6 +10,7 @@ const (
 	StyleDigest Style = "digest" // thematic overview, all sources, default
 	StyleReport Style = "report" // polished formal report, deliveries
 	StyleRetro  Style = "retro"  // retrospective: good/bad/learnings
+	StyleStatus Style = "status" // progress/blocker/next, progress-focused
 )
 
 // validStyles is the exhaustive list of built-in style identifiers.
@@ -18,6 +19,7 @@ var validStyles = []Style{
 	StyleDigest,
 	StyleReport,
 	StyleRetro,
+	StyleStatus,
 }
 
 // IsValidStyle reports whether s is a known built-in style.
@@ -62,6 +64,8 @@ func Prompt(style Style) string {
 		return promptReport
 	case StyleRetro:
 		return promptRetro
+	case StyleStatus:
+		return promptStatus
 	default:
 		return promptDigest
 	}
@@ -163,6 +167,38 @@ Rules:
 - No effort metrics (minutes, commit counts)
 - In-progress work does not appear under "Fortschritt"
 - Translate implementation work: "Renderer umgebaut" -> "verbesserte Ausgabequalitaet"
+- Language: German`
+
+const promptStatus = `Write a progress-focused status update from the developer's activity log.
+
+## How to read the input
+
+Each line: DATE SOURCE: CONTENT
+
+obsidian -- file modified. Use the path to infer topic. No content available.
+claude -- AI session: [project] snippet -- N turns, M min. Skip short sessions (< 3 turns or < 5 min).
+git -- commit message. Always relevant. Group by repo.
+
+## Output format
+
+Write in German. Focus on what is done, what is blocked, and what comes next.
+
+### Fortschritt
+3-5 bullets. Completed and in-progress work. Both matter here.
+Format: "<was> -- <aktueller Stand: abgeschlossen / in Arbeit>"
+
+### Blocker
+0-3 bullets. Unresolved dependencies, open decisions, missing input.
+If none visible in the data, omit this section.
+
+### Naechste Schritte
+2-4 bullets. Concrete next actions based on open work in the data.
+One bullet = one specific action, not a theme.
+
+Rules:
+- No commit hashes or file paths
+- Keep bullets tight -- no explanations, just facts
+- "in Arbeit" means started but not merged/shipped
 - Language: German`
 
 const promptRetro = `Write a sprint retrospective from the developer's activity log.
