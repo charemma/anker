@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/charemma/anker/internal/ui"
 	"github.com/charmbracelet/glamour"
 	"github.com/mattn/go-isatty"
 )
@@ -40,7 +41,9 @@ type TransformConfig struct {
 	AIBaseURL    string
 	AIModel      string
 	AIAPIKey     string
-	EntryCount   int // shown in the footer line
+	EntryCount   int    // shown in the footer line
+	Style        string // shown in the status line
+	Language     string // shown in the status line
 }
 
 // Transform sends rendered recap text through an AI backend for summarization.
@@ -62,7 +65,12 @@ func Transform(ctx context.Context, w io.Writer, renderedText string, period str
 	prompt = fmt.Sprintf("Period: %s\n\n%s", period, prompt)
 
 	// Status line goes to stderr -- invisible when piped
-	_, _ = fmt.Fprintln(os.Stderr, "\nGenerating summary...")
+	statusLine := "Generating summary..."
+	if cfg.Style != "" || cfg.Language != "" {
+		details := fmt.Sprintf("style: %s, lang: %s", cfg.Style, cfg.Language)
+		statusLine = "Generating summary... " + ui.StyleMuted.Render("("+details+")")
+	}
+	_, _ = fmt.Fprintln(os.Stderr, "\n"+statusLine)
 
 	// Buffer AI output so we can glamour-render it
 	var aiOut bytes.Buffer

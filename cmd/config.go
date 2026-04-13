@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/charemma/anker/internal/ai"
 	"github.com/charemma/anker/internal/config"
 	"github.com/charemma/anker/internal/ui"
 	"github.com/spf13/cobra"
@@ -53,6 +54,7 @@ var configPathCmd = &cobra.Command{
 var validConfigKeys = []string{
 	"week_start", "author_email",
 	"ai_backend", "ai_cli_command", "ai_base_url", "ai_model", "ai_api_key", "ai_prompt",
+	"ai_default_style", "ai_language",
 }
 
 var configSetCmd = &cobra.Command{
@@ -110,6 +112,14 @@ func applyConfigKey(cfg *config.Config, key, value string) error {
 		cfg.AIAPIKey = value
 	case "ai_prompt":
 		cfg.AIPrompt = value
+	case "ai_default_style":
+		v := strings.ToLower(value)
+		if !ai.IsValidStyle(v) {
+			return fmt.Errorf("ai_default_style must be one of: %s", strings.Join(ai.ValidStyleNames(), ", "))
+		}
+		cfg.AIDefaultStyle = v
+	case "ai_language":
+		cfg.AILanguage = value
 	default:
 		return fmt.Errorf("unknown key %q\n\nValid keys: %s", key, strings.Join(validConfigKeys, ", "))
 	}
