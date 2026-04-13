@@ -17,3 +17,8 @@ womit = "womit"
 bitte = "bitte"
 mehr = "mehr"
 nicht = "nicht"
+# German connective/prepositions in prompt templates
+oder = "oder"
+fuer = "fuer"
+warum = "warum"
+beim = "beim"

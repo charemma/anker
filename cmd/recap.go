@@ -5,7 +5,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"sort"
+	"strings"
 
 	"github.com/charemma/anker/internal/ai"
 	"github.com/charemma/anker/internal/config"
@@ -22,6 +24,7 @@ var (
 	recapAPIKey string
 	recapRaw    bool
 	recapJSON   bool
+	recapStyle  string
 )
 
 var recapCmd = &cobra.Command{
@@ -40,6 +43,13 @@ Time specifications:
   2025-12-01..31   Date range
   last 7 days      Relative range
 
+Output styles (--style):
+  self             Personal technical recap -- default
+  manager          1:1 meeting preparation
+  customer         Professional status update for clients
+  standup          Daily standup (defaults to yesterday)
+  retro            Sprint retrospective
+
 Output modes:
   (default)        AI-generated summary (requires AI backend)
   --raw            Unformatted entry dump, one per line -- for pipes, grep
@@ -49,18 +59,24 @@ Examples:
   anker recap
   anker recap today
   anker recap thisweek
+  anker recap thisweek --style manager
+  anker recap --style standup
   anker recap lastweek --raw | grep feat
   anker recap 2025-12-01..2025-12-31 --json`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		timespec := "today"
-		if len(args) > 0 {
-			timespec = args[0]
-		}
-
 		cfg, err := config.Load()
 		if err != nil {
 			return fmt.Errorf("failed to load config: %w", err)
+		}
+
+		// Resolve style: --style flag > config ai_default_style > "self"
+		style := resolveStyle(recapStyle, cfg.AIDefaultStyle)
+
+		// Resolve timespec: explicit arg > style default
+		timespec := ai.DefaultTimespec(style)
+		if len(args) > 0 {
+			timespec = args[0]
 		}
 
 		parser := timerange.NewParser(cfg.GetTimerangeConfig())
@@ -92,6 +108,9 @@ Examples:
 		if err != nil {
 			return err
 		}
+
+		// Apply source filter for style before any rendering.
+		result.Entries = filterByStyle(result.Entries, style)
 
 		if len(result.Entries) == 0 {
 			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render("No activity found for "+timespec))
@@ -125,6 +144,12 @@ Examples:
 			return fmt.Errorf("failed to render recap: %w", err)
 		}
 
+		// Resolve prompt: --prompt flag > config ai_prompt > style template
+		promptOverride := recapPrompt
+		if promptOverride == "" && cfg.AIPrompt == "" {
+			promptOverride = string(ai.Prompt(style))
+		}
+
 		period := fmt.Sprintf("%s (%s to %s)", timespec, tr.From.Format("2006-01-02"), tr.To.Format("2006-01-02"))
 		return ai.Transform(context.Background(), os.Stdout, buf.String(), period, ai.TransformConfig{
 			AIPrompt:     cfg.AIPrompt,
@@ -134,8 +159,35 @@ Examples:
 			AIModel:      cfg.AIModel,
 			AIAPIKey:     cfg.AIAPIKey,
 			EntryCount:   len(result.Entries),
-		}, recapPrompt, recapAPIKey)
+		}, promptOverride, recapAPIKey)
 	},
+}
+
+// resolveStyle returns the effective style from flag, config default, or "self".
+func resolveStyle(flagValue, configDefault string) ai.Style {
+	if flagValue != "" {
+		return ai.Style(strings.ToLower(flagValue))
+	}
+	if configDefault != "" {
+		return ai.Style(strings.ToLower(configDefault))
+	}
+	return ai.StyleSelf
+}
+
+// filterByStyle removes entries whose source type is not allowed for the given style.
+// If the style has no source restriction, the entries are returned unchanged.
+func filterByStyle(entries []sources.Entry, style ai.Style) []sources.Entry {
+	allowed := ai.AllowedSources(style)
+	if len(allowed) == 0 {
+		return entries
+	}
+	filtered := entries[:0]
+	for _, e := range entries {
+		if slices.Contains(allowed, e.Source) {
+			filtered = append(filtered, e)
+		}
+	}
+	return filtered
 }
 
 // isAIConfigured reports whether the config has a usable AI backend.
@@ -192,4 +244,5 @@ func init() {
 	recapCmd.Flags().StringVar(&recapAPIKey, "api-key", "", "API key for AI summary")
 	recapCmd.Flags().BoolVar(&recapRaw, "raw", false, "Unformatted entry dump -- for pipes, scripts, grep")
 	recapCmd.Flags().BoolVar(&recapJSON, "json", false, "Structured JSON output")
+	recapCmd.Flags().StringVar(&recapStyle, "style", "", "Summary style: self, manager, customer, standup, retro")
 }

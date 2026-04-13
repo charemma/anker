@@ -14,14 +14,15 @@ import (
 
 // Config holds user configuration for anker.
 type Config struct {
-	WeekStart    string `yaml:"week_start"`             // "monday" or "sunday"
-	AuthorEmail  string `yaml:"author_email,omitempty"` // default git author email for filtering
-	AIBaseURL    string `yaml:"ai_base_url"`            // OpenAI-compatible API base URL
-	AIModel      string `yaml:"ai_model"`               // model name for AI summaries
-	AIAPIKey     string `yaml:"ai_api_key"`             // API key (prefer env var AI_API_KEY)
-	AIPrompt     string `yaml:"ai_prompt"`              // custom prompt for AI summaries
-	AIBackend    string `yaml:"ai_backend"`             // "api" or "cli"
-	AICLICommand string `yaml:"ai_cli_command"`         // CLI tool for ai_backend: cli
+	WeekStart      string `yaml:"week_start"`             // "monday" or "sunday"
+	AuthorEmail    string `yaml:"author_email,omitempty"` // default git author email for filtering
+	AIBaseURL      string `yaml:"ai_base_url"`            // OpenAI-compatible API base URL
+	AIModel        string `yaml:"ai_model"`               // model name for AI summaries
+	AIAPIKey       string `yaml:"ai_api_key"`             // API key (prefer env var AI_API_KEY)
+	AIPrompt       string `yaml:"ai_prompt"`              // custom prompt for AI summaries
+	AIBackend      string `yaml:"ai_backend"`             // "api" or "cli"
+	AICLICommand   string `yaml:"ai_cli_command"`         // CLI tool for ai_backend: cli
+	AIDefaultStyle string `yaml:"ai_default_style"`       // default style: self, manager, customer, standup, retro
 }
 
 // DefaultConfig returns the default configuration.
