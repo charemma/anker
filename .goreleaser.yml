@@ -5,8 +5,8 @@ before:
     - go mod tidy
 
 builds:
-  - id: anker
-    binary: anker
+  - id: ikno
+    binary: ikno
     main: .
     env:
       - CGO_ENABLED=0
@@ -19,12 +19,12 @@ builds:
       - arm64
     ldflags:
       - -s -w
-      - -X github.com/charemma/anker/cmd.Version={{.Version}}
-      - -X github.com/charemma/anker/cmd.Commit={{.Commit}}
-      - -X github.com/charemma/anker/cmd.Date={{.Date}}
+      - -X github.com/charemma/ikno/cmd.Version={{.Version}}
+      - -X github.com/charemma/ikno/cmd.Commit={{.Commit}}
+      - -X github.com/charemma/ikno/cmd.Date={{.Date}}
 
 archives:
-  - id: anker
+  - id: ikno
     format: tar.gz
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format_overrides:
@@ -68,31 +68,31 @@ changelog:
 release:
   github:
     owner: charemma
-    name: anker
+    name: ikno
   draft: false
   prerelease: auto
   mode: replace
   header: |
-    ## anker {{ .Tag }}
+    ## ikno {{ .Tag }}
 
     A local, text-first CLI tool that helps you remember what you actually did.
   footer: |
-    **Full Changelog**: https://github.com/charemma/anker/compare/{{ .PreviousTag }}...{{ .Tag }}
+    **Full Changelog**: https://github.com/charemma/ikno/compare/{{ .PreviousTag }}...{{ .Tag }}
 
     ## Installation
 
     ### macOS/Linux
     ```bash
     # Download and extract
-    curl -L https://github.com/charemma/anker/releases/download/{{ .Tag }}/anker_{{ .Tag }}_$(uname -s)_$(uname -m).tar.gz | tar xz
+    curl -L https://github.com/charemma/ikno/releases/download/{{ .Tag }}/ikno_{{ .Tag }}_$(uname -s)_$(uname -m).tar.gz | tar xz
 
     # Move to PATH
-    sudo mv anker /usr/local/bin/
+    sudo mv ikno /usr/local/bin/
     ```
 
     ### Go Install
     ```bash
-    go install github.com/charemma/anker@{{ .Tag }}
+    go install github.com/charemma/ikno@{{ .Tag }}
     ```
 
 # Homebrew tap - disabled for now
@@ -101,7 +101,7 @@ release:
 #       owner: charemma
 #       name: homebrew-tap
 #     directory: Formula
-#     homepage: https://github.com/charemma/anker
+#     homepage: https://github.com/charemma/ikno
 #     description: A local CLI tool for reconstructing your workday
 #     license: Apache-2.0
 #     skip_upload: auto

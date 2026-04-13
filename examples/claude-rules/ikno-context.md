@@ -1,17 +1,17 @@
-## anker context
+## ikno context
 
-anker is a CLI tool for reconstructing your workday after the fact. It collects activity data from local sources (git commits, markdown notes, Obsidian vaults, Claude Code sessions) and produces recap summaries.
+ikno is a CLI tool for reconstructing your workday after the fact. It collects activity data from local sources (git commits, markdown notes, Obsidian vaults, Claude Code sessions) and produces recap summaries.
 
-### How anker works
+### How ikno works
 
-- Sources are explicitly registered: `anker source add git ~/code/project`
-- `anker recap today` collects entries from all sources for the given time period
+- Sources are explicitly registered: `ikno source add git ~/code/project`
+- `ikno recap today` collects entries from all sources for the given time period
 - Output formats: simple (default), detailed, json, markdown, ai
 - The `ai` format sends the recap to an LLM for summarization
 
 ### Interpreting recap data
 
-When you receive anker recap data (e.g. via `--format ai` or piped input):
+When you receive ikno recap data (e.g. via `--format ai` or piped input):
 
 - Entries are grouped by source location (repository path, vault path, etc.)
 - Each entry has a timestamp, content (commit message, note text, etc.), and metadata

@@ -1,5 +1,5 @@
 {
-  description = "anker - reconstruct your workday after the fact";
+  description = "ikno - reconstruct your workday after the fact";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -32,7 +32,7 @@
       ];
     in {
       packages.default = pkgs.buildGoModule {
-        pname = "anker";
+        pname = "ikno";
         inherit version;
         src = ./.;
         vendorHash = "sha256-mAEGNfDe0hNKO/iMQmCgbucHn8qfyoGc6gryTudV2AQ=";
@@ -48,13 +48,13 @@
         build = pkg;
 
         tests = pkg.overrideAttrs (old: {
-          pname = "anker-tests";
+          pname = "ikno-tests";
           doCheck = true;
           nativeCheckInputs = [pkgs.git];
         });
 
         lint = pkgs.stdenvNoCC.mkDerivation {
-          name = "anker-lint";
+          name = "ikno-lint";
           src = ./.;
           nativeBuildInputs = [pkgs.go pkgs.golangci-lint];
           buildPhase = ''
