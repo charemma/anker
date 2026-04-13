@@ -246,11 +246,11 @@ func parseTemplateFile(data []byte) parsedTemplate {
 	return parsedTemplate{Description: description, Body: body}
 }
 
-// loadCustomTemplate looks for ~/.anker/templates/<name>.md, parses its
+// loadCustomTemplate looks for ~/.config/ikno/templates/<name>.md, parses its
 // frontmatter, and returns the prompt body with {language} injected.
 // Returns (prompt, true, nil) if found, ("", false, nil) if not found.
 func loadCustomTemplate(name, lang string) (string, bool, error) {
-	home, err := paths.GetAnkerHome()
+	home, err := paths.GetConfigDir()
 	if err != nil {
 		return "", false, err
 	}
@@ -302,7 +302,7 @@ func runListStyles(w *os.File, verbose bool) error {
 	}
 
 	// List custom templates if any exist.
-	if home, err := paths.GetAnkerHome(); err == nil {
+	if home, err := paths.GetConfigDir(); err == nil {
 		tmplDir := filepath.Join(home, "templates")
 		if entries, err := os.ReadDir(tmplDir); err == nil {
 			type customEntry struct {
@@ -351,7 +351,7 @@ func runListStyles(w *os.File, verbose bool) error {
 
 	_, _ = fmt.Fprintln(w)
 	_, _ = fmt.Fprintln(w, ui.StyleMuted.Render("Show full prompt: ikno recap --styles --verbose"))
-	_, _ = fmt.Fprintln(w, ui.StyleMuted.Render("Add custom style: ~/.anker/templates/<name>.md"))
+	_, _ = fmt.Fprintln(w, ui.StyleMuted.Render("Add custom style: ~/.config/ikno/templates/<name>.md"))
 	return nil
 }
 

@@ -12,7 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Config holds user configuration for anker.
+// Config holds user configuration for ikno.
 type Config struct {
 	WeekStart      string `yaml:"week_start"`             // "monday" or "sunday"
 	AuthorEmail    string `yaml:"author_email,omitempty"` // default git author email for filtering
@@ -39,13 +39,13 @@ func DefaultConfig() *Config {
 	}
 }
 
-// Load reads the configuration from $ANKER_HOME/config.yaml or ~/.anker/config.yaml.
+// Load reads the configuration from $IKNO_HOME/config.yaml or ~/.config/ikno/config.yaml.
 // If the file doesn't exist, returns the default configuration.
 // If author_email is not set, attempts to read from git config.
 func Load() (*Config, error) {
-	baseDir, err := paths.GetAnkerHome()
+	baseDir, err := paths.GetConfigDir()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get anker home directory: %w", err)
+		return nil, fmt.Errorf("failed to get ikno config directory: %w", err)
 	}
 
 	configPath := filepath.Join(baseDir, "config.yaml")
@@ -96,16 +96,16 @@ func Load() (*Config, error) {
 
 // ConfigPath returns the path to the config file.
 func ConfigPath() (string, error) {
-	baseDir, err := paths.GetAnkerHome()
+	baseDir, err := paths.GetConfigDir()
 	if err != nil {
-		return "", fmt.Errorf("failed to get anker home directory: %w", err)
+		return "", fmt.Errorf("failed to get ikno config directory: %w", err)
 	}
 	return filepath.Join(baseDir, "config.yaml"), nil
 }
 
 // configTemplate is written when creating a new config file, so the user
 // can see all available options with commented-out examples.
-const configTemplate = `# anker configuration
+const configTemplate = `# ikno configuration
 # See: https://github.com/charemma/ikno
 
 # Week start day for "thisweek"/"lastweek" timespecs
@@ -114,7 +114,7 @@ week_start: monday
 # Default git author email for filtering commits
 # author_email: you@example.com
 
-# AI summary settings for "anker recap --format ai"
+# AI summary settings for "ikno recap --format ai"
 # Supports any OpenAI-compatible API endpoint.
 #
 # Providers:
@@ -134,11 +134,11 @@ week_start: monday
 # ai_cli_command: claude -p            # CLI tool for ai_backend: cli
 `
 
-// Save writes the configuration to $ANKER_HOME/config.yaml or ~/.anker/config.yaml.
+// Save writes the configuration to $IKNO_HOME/config.yaml or ~/.config/ikno/config.yaml.
 func Save(config *Config) error {
-	baseDir, err := paths.GetAnkerHome()
+	baseDir, err := paths.GetConfigDir()
 	if err != nil {
-		return fmt.Errorf("failed to get anker home directory: %w", err)
+		return fmt.Errorf("failed to get ikno config directory: %w", err)
 	}
 
 	if err := os.MkdirAll(baseDir, 0755); err != nil {
