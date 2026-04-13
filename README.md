@@ -122,31 +122,75 @@ ikno source list
 
 ---
 
-## AI summaries
+## Styles
 
-ikno generates narrative summaries from your activity data. The default style (`digest`) produces a full technical overview. Other styles fit different contexts:
+ikno ships with 6 built-in report styles. Pick the one that fits your audience:
 
 ```bash
-ikno recap today --style brief       # Done / Next / Blockers -- 5-10 lines
-ikno recap thisweek                  # digest (default) -- 12-18 lines
+ikno recap today --style brief       # Done / Next / Blockers (5-10 lines)
+ikno recap thisweek                  # digest -- full overview (default)
 ikno recap thisweek --style status   # Progress / Blockers / Next
 ikno recap thisweek --style report   # Polished prose, deliveries first
-ikno recap thisweek --style retro    # Retrospective format
+ikno recap thisweek --style retro    # What went well / badly / learnings
+ikno recap today --style stats       # Category breakdown with ASCII charts
 ```
 
-**Language:** ikno writes summaries in the language you configure, or German by default.
+See what each style does: `ikno recap --styles`
+
+## Any language
+
+Every report -- headings, bullets, everything -- is written in the language you choose:
 
 ```bash
-ikno recap thisweek --lang en
+ikno recap thisweek --lang english
+ikno recap thisweek --lang deutsch
+ikno recap thisweek --lang greek
 ```
 
-**Your own AI backend:** ikno uses your existing setup. If Ollama is running locally, it uses that. Otherwise it falls back to any configured API key. No account required, no data leaves your machine unless you choose.
-
-**Custom templates:** Drop a `.md` file in `~/.config/ikno/templates/` to define your own style:
+Set a default so you don't have to type it every time:
 
 ```bash
-ikno recap --styles            # list built-in and custom styles
-ikno recap thisweek --style weekly-email
+ikno config set ai_language english
+```
+
+## Custom templates
+
+Need a report for a specific client, a weekly team email, or a format your manager prefers? Create your own style as a `.md` file:
+
+```bash
+mkdir -p ~/.config/ikno/templates
+
+cat > ~/.config/ikno/templates/client-acme.md << 'EOF'
+---
+description: Weekly status report for Acme Corp
+---
+
+Write a professional status report for a client.
+Focus on deliverables and milestones. No internal jargon.
+Write EVERYTHING in {language}.
+Max 15 lines.
+EOF
+
+ikno recap thisweek --style client-acme
+```
+
+List all available styles (built-in + custom):
+
+```bash
+ikno recap --styles
+```
+
+## AI backend
+
+ikno uses your own AI setup -- no account with us, no data leaves your machine unless you choose:
+
+- **CLI tool** (default): `claude -p`, or any tool that reads from stdin
+- **API endpoint**: OpenAI, Anthropic, Ollama, or any compatible API
+- **Local model**: Ollama running locally -- fully offline
+
+```bash
+ikno config set ai_backend cli
+ikno config set ai_cli_command "claude -p"
 ```
 
 ---
