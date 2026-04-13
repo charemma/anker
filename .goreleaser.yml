@@ -33,7 +33,6 @@ archives:
     files:
       - LICENSE
       - README.md
-      - TODO.md
 
 checksum:
   name_template: 'checksums.txt'
