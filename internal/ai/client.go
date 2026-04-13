@@ -64,7 +64,7 @@ func (c *Client) StreamCompletion(ctx context.Context, systemPrompt, userContent
 // BuildRequest constructs the HTTP request without sending it.
 func (c *Client) BuildRequest(ctx context.Context, systemPrompt, userContent string) (*http.Request, error) {
 	if c.BaseURL == "" {
-		return nil, fmt.Errorf("ai_base_url is not configured (set it in ~/.anker/config.yaml or use a provider like Anthropic, OpenAI, or ollama)")
+		return nil, fmt.Errorf("ai_base_url is not configured (set it in ~/.config/ikno/config.yaml or use a provider like Anthropic, OpenAI, or ollama)")
 	}
 
 	url := strings.TrimRight(c.BaseURL, "/") + "/chat/completions"

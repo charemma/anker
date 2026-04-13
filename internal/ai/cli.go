@@ -21,7 +21,7 @@ func RunCLI(command, prompt, recapContent string, w io.Writer) error {
 
 	// Check PATH before exec so we can give a clear error instead of "exit status 127".
 	if _, err := exec.LookPath(bin); err != nil {
-		return fmt.Errorf("AI command %q not found in PATH.\n\nCheck that the command is installed and accessible:\n  which %s\n\nOr update the command:\n  anker config set ai_cli_command \"/full/path/to/%s -p\"", bin, bin, bin)
+		return fmt.Errorf("AI command %q not found in PATH.\n\nCheck that the command is installed and accessible:\n  which %s\n\nOr update the command:\n  ikno config set ai_cli_command \"/full/path/to/%s -p\"", bin, bin, bin)
 	}
 
 	args := append(parts[1:], prompt)
@@ -33,7 +33,7 @@ func RunCLI(command, prompt, recapContent string, w io.Writer) error {
 	if err := cmd.Run(); err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) && exitErr.ExitCode() == 127 {
-			return fmt.Errorf("AI command %q not found in PATH.\n\nCheck that the command is installed and accessible:\n  which %s\n\nOr update the command:\n  anker config set ai_cli_command \"/full/path/to/%s -p\"", bin, bin, bin)
+			return fmt.Errorf("AI command %q not found in PATH.\n\nCheck that the command is installed and accessible:\n  which %s\n\nOr update the command:\n  ikno config set ai_cli_command \"/full/path/to/%s -p\"", bin, bin, bin)
 		}
 		return fmt.Errorf("%s failed: %w", bin, err)
 	}
