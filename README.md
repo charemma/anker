@@ -42,21 +42,52 @@ system with 6 styles, and iterated on logo/naming.
 
 ---
 
+## More styles
+
+**Standup (brief):**
+```
+$ ikno recap today --style brief
+
+Done
+- Renamed anker to ikno (full rebrand)
+- Added prompt template system with --style/--lang flags
+- Implemented stats style with ASCII charts
+- Set up auto-tagging CI
+
+Next
+- Logo finalization for ikno
+- Custom template docs/polish
+```
+
+**Retrospective:**
+```
+$ ikno recap thisweek --style retro
+
+### What went well
+- The anker-to-ikno rename landed cleanly across module, CLI, config, docs.
+- Prompt template system shipped in one day: 6 built-in styles, custom templates, --lang flag.
+
+### What didn't go well
+- Stats output formatting needed three consecutive fix commits.
+- Logo design went nowhere after three sessions.
+
+### Learnings
+- Test AI output against the terminal renderer before committing.
+- Parallel-agent pattern for naming worked well -- worth repeating.
+```
+
+---
+
 ## Install
 
 **Nix:**
 ```bash
-nix run github.com/charemma/ikno
+nix run github:charemma/ikno
 ```
 
 **Go:**
 ```bash
 go install github.com/charemma/ikno@latest
-```
-
-**Homebrew:**
-```bash
-brew install charemma/tap/ikno
 ```
 
 ---
