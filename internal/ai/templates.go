@@ -133,10 +133,10 @@ One bullet = one concrete thing, not a theme.
 Rules:
 - Max 8 words per bullet
 - No timestamps, hashes, or file paths
-- Name the project: "in ikno", "in nixos-config"
-- Active verbs: "implementiert", "gefixt", "dokumentiert" -- not "gearbeitet an"
+- Name the project from the input data, e.g. "in my-app", "in infra"
+- Active verbs, not passive: "implemented", "fixed", "documented" -- not "worked on"
 - Do not pad with filler bullets if the data is sparse
-- ALWAYS prefix each bullet with the repo/project name in brackets, e.g. "[ikno] renamed module" or "[nixos-config] updated flake". The reader works on multiple projects and must see at a glance which repo each item belongs to. Never write a bullet without a project prefix.
+- ALWAYS prefix each bullet with the repo/project name in brackets, e.g. "[my-app] fixed auth bug" or "[infra] updated config". Extract project names from the git repo paths and claude session project names in the input data. The reader works on multiple projects and must see at a glance which repo each item belongs to. Never write a bullet without a project prefix.
 - Language: {language}`
 
 const promptDigest = `Summarize the developer's activity log as a thematic technical overview.
@@ -173,7 +173,7 @@ Rules:
 - No vague qualifiers: "intensiv", "erfolgreich", "verschiedene", "einige"
 - If something took > 100 claude minutes, mark with "(groesster Zeitblock)"
 - Skip themes with only 1 low-signal obsidian entry and no commits or claude sessions
-- ALWAYS prefix each bullet with the repo/project name in brackets, e.g. "[ikno] renamed module" or "[nixos-config] updated flake". The reader works on multiple projects and must see at a glance which repo each item belongs to. Never write a bullet without a project prefix.
+- ALWAYS prefix each bullet with the repo/project name in brackets, e.g. "[my-app] fixed auth bug" or "[infra] updated config". Extract project names from the git repo paths and claude session project names in the input data. The reader works on multiple projects and must see at a glance which repo each item belongs to. Never write a bullet without a project prefix.
 - Language: {language}`
 
 const promptReport = `Write a polished formal report from the developer's activity log.
@@ -190,22 +190,22 @@ git -- commit message. Translate to outcome language. Merged/shipped work only.
 
 Write EVERYTHING in {language} -- all headings, all bullets, all text. No exceptions. Formal tone. No internal jargon, no tool names unless relevant.
 
-### Fortschritt
+### Progress
 2-4 bullets. Completed items only. Format: "<was abgeschlossen> -- <Mehrwert oder Ergebnis>"
 Describe outcomes and value, not implementation details.
 
 ### Aktueller Stand
 2-3 sentences. Current project state: what phase, what works, what is in progress.
 
-### Naechste Schritte
+### Next steps
 2-3 bullets. Concrete next items. No vague placeholders.
 
 Rules:
 - No commit hashes, file paths, or internal tool names (git, Obsidian, Claude)
 - No effort metrics (minutes, commit counts)
-- In-progress work does not appear under "Fortschritt"
+- In-progress work does not appear under "Progress"
 - Translate implementation work: "Renderer umgebaut" -> "verbesserte Ausgabequalitaet"
-- ALWAYS prefix each bullet with the repo/project name in brackets, e.g. "[ikno] renamed module" or "[nixos-config] updated flake". The reader works on multiple projects and must see at a glance which repo each item belongs to. Never write a bullet without a project prefix.
+- ALWAYS prefix each bullet with the repo/project name in brackets, e.g. "[my-app] fixed auth bug" or "[infra] updated config". Extract project names from the git repo paths and claude session project names in the input data. The reader works on multiple projects and must see at a glance which repo each item belongs to. Never write a bullet without a project prefix.
 - Language: {language}`
 
 const promptStatus = `Write a progress-focused status update from the developer's activity log.
@@ -238,7 +238,7 @@ Rules:
 - No commit hashes or file paths
 - Keep bullets tight -- no explanations, just facts
 - "in Arbeit" means started but not merged/shipped
-- ALWAYS prefix each bullet with the repo/project name in brackets, e.g. "[ikno] renamed module" or "[nixos-config] updated flake". The reader works on multiple projects and must see at a glance which repo each item belongs to. Never write a bullet without a project prefix.
+- ALWAYS prefix each bullet with the repo/project name in brackets, e.g. "[my-app] fixed auth bug" or "[infra] updated config". Extract project names from the git repo paths and claude session project names in the input data. The reader works on multiple projects and must see at a glance which repo each item belongs to. Never write a bullet without a project prefix.
 - Language: {language}`
 
 const promptRetro = `Write a sprint retrospective from the developer's activity log.
@@ -255,26 +255,26 @@ git -- commit message. Always relevant. Group by repo.
 
 Write EVERYTHING in {language} -- all headings, all bullets, all text. No exceptions. Structured retrospective format.
 
-### Was lief gut
+### What went well
 2-4 bullets. Things that went smoothly, clear wins, good decisions made.
 Be specific -- name the feature, fix, or approach that worked.
 
-### Was lief schlecht
+### What didn't go well
 2-4 bullets. Friction points, repeated back-and-forths, time sinks, wrong turns.
 No self-flagellation -- just honest observations.
 
-### Zeitverteilung
+### Time distribution
 2-3 bullets. Where did the time actually go? Use claude session durations and commit density as proxies.
 Format: "<topic> -- ca. <N>% der Zeit"
 
-### Learnings
+### Takeaways
 1-3 bullets. What would you do differently? What insight is worth keeping?
 
 Rules:
 - No commit hashes or file paths
 - Be specific, not generic
 - If there is nothing notable for a section, omit it entirely
-- ALWAYS prefix each bullet with the repo/project name in brackets, e.g. "[ikno] renamed module" or "[nixos-config] updated flake". The reader works on multiple projects and must see at a glance which repo each item belongs to. Never write a bullet without a project prefix.
+- ALWAYS prefix each bullet with the repo/project name in brackets, e.g. "[my-app] fixed auth bug" or "[infra] updated config". Extract project names from the git repo paths and claude session project names in the input data. The reader works on multiple projects and must see at a glance which repo each item belongs to. Never write a bullet without a project prefix.
 - Language: {language}`
 
 const promptStats = `Analyze the activity log and produce a work statistics report.
