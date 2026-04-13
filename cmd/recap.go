@@ -61,13 +61,13 @@ Output modes:
   --json           Structured JSON
 
 Examples:
-  anker recap
-  anker recap today
-  anker recap thisweek
-  anker recap thisweek --style digest
-  anker recap --style brief
-  anker recap lastweek --raw | grep feat
-  anker recap 2025-12-01..2025-12-31 --json`,
+  ikno recap
+  ikno recap today
+  ikno recap thisweek
+  ikno recap thisweek --style digest
+  ikno recap --style brief
+  ikno recap lastweek --raw | grep feat
+  ikno recap 2025-12-01..2025-12-31 --json`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if recapStyles {
@@ -111,8 +111,8 @@ Examples:
 			_, _ = fmt.Fprintln(os.Stdout, ui.StyleNormal.Render("No sources configured yet."))
 			_, _ = fmt.Fprintln(os.Stdout)
 			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render("Quick setup options:"))
-			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render("  anker source add        Add the current directory"))
-			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render("  anker source add ~/code Add a directory of repos"))
+			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render("  ikno source add        Add the current directory"))
+			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render("  ikno source add ~/code Add a directory of repos"))
 			return nil
 		}
 
@@ -139,15 +139,15 @@ Examples:
 
 		// Default: AI summary
 		if !isAIConfigured(cfg) {
-			_, _ = fmt.Fprintln(os.Stdout, ui.StyleNormal.Render("anker needs an AI backend to generate readable reports."))
+			_, _ = fmt.Fprintln(os.Stdout, ui.StyleNormal.Render("ikno needs an AI backend to generate readable reports."))
 			_, _ = fmt.Fprintln(os.Stdout)
 			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render("Quick setup:"))
-			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render(`  anker config set ai_backend cli`))
-			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render(`  anker config set ai_cli_command "claude -p"`))
+			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render(`  ikno config set ai_backend cli`))
+			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render(`  ikno config set ai_cli_command "claude -p"`))
 			_, _ = fmt.Fprintln(os.Stdout)
-			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render("Or run: anker init"))
+			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render("Or run: ikno init"))
 			_, _ = fmt.Fprintln(os.Stdout)
-			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render("For raw data without AI: anker recap --raw"))
+			_, _ = fmt.Fprintln(os.Stdout, ui.StyleMuted.Render("For raw data without AI: ikno recap --raw"))
 			return nil
 		}
 
@@ -350,7 +350,7 @@ func runListStyles(w *os.File, verbose bool) error {
 	}
 
 	_, _ = fmt.Fprintln(w)
-	_, _ = fmt.Fprintln(w, ui.StyleMuted.Render("Show full prompt: anker recap --styles --verbose"))
+	_, _ = fmt.Fprintln(w, ui.StyleMuted.Render("Show full prompt: ikno recap --styles --verbose"))
 	_, _ = fmt.Fprintln(w, ui.StyleMuted.Render("Add custom style: ~/.anker/templates/<name>.md"))
 	return nil
 }

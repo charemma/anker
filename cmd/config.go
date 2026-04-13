@@ -15,7 +15,7 @@ import (
 var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Edit configuration",
-	Long: `Open the anker configuration file in your editor.
+	Long: `Open the ikno configuration file in your editor.
 
 Creates the config file with commented defaults if it doesn't exist yet.
 Editor is resolved from $VISUAL, $EDITOR, or falls back to vi.`,

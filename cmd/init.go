@@ -53,7 +53,7 @@ var initYes bool
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Interactive setup wizard",
-	Long: `Set up anker sources step by step.
+	Long: `Set up ikno sources step by step.
 
 Walks through each source type and offers to add what it finds:
   Git repositories in ~/code (or a path you specify)
@@ -62,8 +62,8 @@ Walks through each source type and offers to add what it finds:
   Markdown directories (opt-in only)
 
 Examples:
-  anker init
-  anker init --yes`,
+  ikno init
+  ikno init --yes`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if !isTTY() && !initYes {
@@ -86,8 +86,8 @@ Examples:
 		}
 
 		if !initYes {
-			fmt.Println(styleBold.Render("Welcome to anker. Let's find your sources."))
-			fmt.Println("This wizard adds the data sources anker reads for your recap.")
+			fmt.Println(styleBold.Render("Welcome to ikno. Let's find your sources."))
+			fmt.Println("This wizard adds the data sources ikno reads for your recap.")
 			fmt.Println()
 		}
 
@@ -137,11 +137,11 @@ Examples:
 		if counts.total() > 0 {
 			fmt.Println(styleBold.Render("Done. Added " + counts.summary() + "."))
 			fmt.Println()
-			fmt.Println("Try: anker recap thisweek")
+			fmt.Println("Try: ikno recap thisweek")
 		} else {
 			fmt.Println(styleBold.Render("Done. Nothing new to add."))
 			fmt.Println()
-			fmt.Println("Run: anker recap thisweek")
+			fmt.Println("Run: ikno recap thisweek")
 		}
 		return nil
 	},
@@ -206,7 +206,7 @@ func initStepGit(store *storage.Store, registered []sources.Config) (int, error)
 	if _, statErr := os.Stat(codeDir); statErr != nil {
 		fmt.Println()
 		fmt.Printf("Directory not found: %s\n", codeDir)
-		fmt.Println(styleMuted.Render("Add a repository manually: anker source add git ~/path/to/repo"))
+		fmt.Println(styleMuted.Render("Add a repository manually: ikno source add git ~/path/to/repo"))
 		fmt.Println()
 		return 0, nil
 	}
@@ -243,7 +243,7 @@ func initStepGit(store *storage.Store, registered []sources.Config) (int, error)
 					alreadyReg, initPlural(alreadyReg, "repo", "repos"), displayDir)))
 		} else {
 			fmt.Printf("No git repositories found in %s.\n", displayDir)
-			fmt.Println(styleMuted.Render("Add a repository manually: anker source add git ~/path/to/repo"))
+			fmt.Println(styleMuted.Render("Add a repository manually: ikno source add git ~/path/to/repo"))
 		}
 		fmt.Println()
 		return 0, nil

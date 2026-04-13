@@ -50,22 +50,22 @@ Supported types:
   claude   - Track Claude Code session interactions
 
 With auto-detection:
-  anker source add                      detect and add cwd
-  anker source add ~/path               detect ~/path (or scan children)
-  anker source add git ~/path           explicit type (unchanged)
-  anker source add ~/code --type git    force type on a path
+  ikno source add                      detect and add cwd
+  ikno source add ~/path               detect ~/path (or scan children)
+  ikno source add git ~/path           explicit type (unchanged)
+  ikno source add ~/code --type git    force type on a path
 
 Examples:
-  anker source add
-  anker source add ~/code/my-project
-  anker source add ~/code/charemma      (scans directory children)
-  anker source add git .
-  anker source add git ~/code/my-project
-  anker source add git . --author user@example.com
-  anker source add markdown ~/Obsidian/Daily
-  anker source add markdown ~/notes --tags work,done
-  anker source add obsidian ~/Documents/Obsidian
-  anker source add claude`,
+  ikno source add
+  ikno source add ~/code/my-project
+  ikno source add ~/code/charemma      (scans directory children)
+  ikno source add git .
+  ikno source add git ~/code/my-project
+  ikno source add git . --author user@example.com
+  ikno source add markdown ~/Obsidian/Daily
+  ikno source add markdown ~/notes --tags work,done
+  ikno source add obsidian ~/Documents/Obsidian
+  ikno source add claude`,
 	Args: cobra.RangeArgs(0, 2),
 	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
@@ -88,7 +88,7 @@ Examples:
 
 		// Validate ambiguous 2-arg case where first arg is not a known type
 		if len(args) == 2 && !knownTypes[args[0]] {
-			return fmt.Errorf("unrecognized source type %q -- use: anker source add <type> <path> or anker source add <path>", args[0])
+			return fmt.Errorf("unrecognized source type %q -- use: ikno source add <type> <path> or ikno source add <path>", args[0])
 		}
 
 		// --type flag overrides auto-detection (only when not already explicit)
@@ -141,7 +141,7 @@ func parseAddArgs(args []string) (sourceType, path string, explicit bool) {
 		path = cwd
 	case 1:
 		if knownTypes[args[0]] {
-			// legacy: "anker source add claude" or "anker source add git"
+			// legacy: "ikno source add claude" or "ikno source add git"
 			sourceType = args[0]
 			explicit = true
 		} else {
@@ -150,7 +150,7 @@ func parseAddArgs(args []string) (sourceType, path string, explicit bool) {
 		}
 	case 2:
 		if knownTypes[args[0]] {
-			// legacy: "anker source add git ~/path"
+			// legacy: "ikno source add git ~/path"
 			sourceType = args[0]
 			path = args[1]
 			explicit = true
