@@ -10,14 +10,14 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/charemma/anker/internal/ai"
-	"github.com/charemma/anker/internal/config"
-	"github.com/charemma/anker/internal/paths"
-	"github.com/charemma/anker/internal/recap"
-	"github.com/charemma/anker/internal/sources"
-	"github.com/charemma/anker/internal/storage"
-	"github.com/charemma/anker/internal/timerange"
-	"github.com/charemma/anker/internal/ui"
+	"github.com/charemma/ikno/internal/ai"
+	"github.com/charemma/ikno/internal/config"
+	"github.com/charemma/ikno/internal/paths"
+	"github.com/charemma/ikno/internal/recap"
+	"github.com/charemma/ikno/internal/sources"
+	"github.com/charemma/ikno/internal/storage"
+	"github.com/charemma/ikno/internal/timerange"
+	"github.com/charemma/ikno/internal/ui"
 	"github.com/spf13/cobra"
 )
 

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charemma/anker/internal/timerange/locales"
+	"github.com/charemma/ikno/internal/timerange/locales"
 )
 
 var (

@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charemma/anker/internal/sources"
-	"github.com/charemma/anker/internal/sources/aisession"
+	"github.com/charemma/ikno/internal/sources"
+	"github.com/charemma/ikno/internal/sources/aisession"
 )
 
 const maxContentPromptLength = 500

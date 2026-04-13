@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/charemma/anker/internal/ui"
+	"github.com/charemma/ikno/internal/ui"
 	"github.com/charmbracelet/glamour"
 	"github.com/mattn/go-isatty"
 )

@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/charemma/anker/internal/git"
-	"github.com/charemma/anker/internal/paths"
-	"github.com/charemma/anker/internal/timerange"
+	"github.com/charemma/ikno/internal/git"
+	"github.com/charemma/ikno/internal/paths"
+	"github.com/charemma/ikno/internal/timerange"
 	"gopkg.in/yaml.v3"
 )
 
@@ -106,7 +106,7 @@ func ConfigPath() (string, error) {
 // configTemplate is written when creating a new config file, so the user
 // can see all available options with commented-out examples.
 const configTemplate = `# anker configuration
-# See: https://github.com/charemma/anker
+# See: https://github.com/charemma/ikno
 
 # Week start day for "thisweek"/"lastweek" timespecs
 week_start: monday

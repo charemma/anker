@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/charemma/anker/internal/config"
-	"github.com/charemma/anker/internal/git"
-	"github.com/charemma/anker/internal/sources"
-	claudesource "github.com/charemma/anker/internal/sources/claude"
-	"github.com/charemma/anker/internal/storage"
+	"github.com/charemma/ikno/internal/config"
+	"github.com/charemma/ikno/internal/git"
+	"github.com/charemma/ikno/internal/sources"
+	claudesource "github.com/charemma/ikno/internal/sources/claude"
+	"github.com/charemma/ikno/internal/storage"
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 )

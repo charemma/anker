@@ -1,3 +1,6 @@
+[files]
+extend-exclude = ["today.md", "recap.md"]
+
 [default.extend-words]
 # German month names used in locale support
 januar = "januar"

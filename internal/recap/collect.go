@@ -5,9 +5,9 @@ import (
 	"io"
 	"sort"
 
-	"github.com/charemma/anker/internal/sources"
-	"github.com/charemma/anker/internal/sources/git"
-	"github.com/charemma/anker/internal/timerange"
+	"github.com/charemma/ikno/internal/sources"
+	"github.com/charemma/ikno/internal/sources/git"
+	"github.com/charemma/ikno/internal/timerange"
 )
 
 // SourceFactory creates a Source from a stored Config.

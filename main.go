@@ -1,6 +1,6 @@
 package main
 
-import "github.com/charemma/anker/cmd"
+import "github.com/charemma/ikno/cmd"
 
 var (
 	version = "dev"

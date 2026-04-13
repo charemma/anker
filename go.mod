@@ -1,4 +1,4 @@
-module github.com/charemma/anker
+module github.com/charemma/ikno
 
 go 1.24.5
 

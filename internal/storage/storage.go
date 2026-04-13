@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/charemma/anker/internal/paths"
-	"github.com/charemma/anker/internal/sources"
+	"github.com/charemma/ikno/internal/paths"
+	"github.com/charemma/ikno/internal/sources"
 	"gopkg.in/yaml.v3"
 )
 
