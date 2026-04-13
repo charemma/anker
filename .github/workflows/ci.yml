@@ -49,12 +49,12 @@ jobs:
       - name: Create daily tag
         run: |
           DATE=$(date -u +%Y.%m.%d)
-          # Check if tag already exists, add suffix if so
-          TAG="v${DATE}"
+          # No v-prefix so release.yml (which triggers on v*) is not triggered
+          TAG="dev-${DATE}"
           COUNTER=0
           while git rev-parse "${TAG}" >/dev/null 2>&1; do
             COUNTER=$((COUNTER + 1))
-            TAG="v${DATE}.${COUNTER}"
+            TAG="dev-${DATE}.${COUNTER}"
           done
           git tag "${TAG}"
           git push origin "${TAG}"
