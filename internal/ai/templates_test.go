@@ -11,14 +11,13 @@ func TestIsValidStyle(t *testing.T) {
 		input string
 		want  bool
 	}{
-		{"summary", true},
-		{"detailed", true},
-		{"standup", true},
-		{"narrative", true},
+		{"brief", true},
+		{"digest", true},
 		{"report", true},
+		{"retro", true},
 		{"unknown", false},
 		{"", false},
-		{"SUMMARY", false}, // case-sensitive
+		{"BRIEF", false}, // case-sensitive
 	}
 	for _, tt := range tests {
 		if got := IsValidStyle(tt.input); got != tt.want {
@@ -29,10 +28,10 @@ func TestIsValidStyle(t *testing.T) {
 
 func TestValidStyleNames(t *testing.T) {
 	names := ValidStyleNames()
-	if len(names) != 5 {
-		t.Fatalf("expected 5 style names, got %d", len(names))
+	if len(names) != 4 {
+		t.Fatalf("expected 4 style names, got %d", len(names))
 	}
-	want := map[string]bool{"summary": true, "detailed": true, "standup": true, "narrative": true, "report": true}
+	want := map[string]bool{"brief": true, "digest": true, "report": true, "retro": true}
 	for _, name := range names {
 		if !want[name] {
 			t.Errorf("unexpected style name %q", name)
@@ -45,11 +44,10 @@ func TestDefaultTimespec(t *testing.T) {
 		style Style
 		want  string
 	}{
-		{StyleSummary, "today"},
-		{StyleDetailed, "today"},
-		{StyleNarrative, "today"},
-		{StyleStandup, "yesterday"},
+		{StyleBrief, "yesterday"},
+		{StyleDigest, "today"},
 		{StyleReport, "today"},
+		{StyleRetro, "today"},
 	}
 	for _, tt := range tests {
 		if got := DefaultTimespec(tt.style); got != tt.want {
@@ -65,36 +63,7 @@ func TestAllowedSources(t *testing.T) {
 		wantN   int
 	}{
 		{
-			StyleSummary,
-			[]sources.Entry{
-				{Source: "git"},
-				{Source: "obsidian"},
-				{Source: "claude"},
-				{Source: "markdown"},
-			},
-			4, // no filter
-		},
-		{
-			StyleDetailed,
-			[]sources.Entry{
-				{Source: "git"},
-				{Source: "obsidian"},
-				{Source: "claude"},
-			},
-			3, // no filter
-		},
-		{
-			StyleNarrative,
-			[]sources.Entry{
-				{Source: "git"},
-				{Source: "obsidian"},
-				{Source: "claude"},
-				{Source: "markdown"},
-			},
-			4, // no filter
-		},
-		{
-			StyleStandup,
+			StyleBrief,
 			[]sources.Entry{
 				{Source: "git"},
 				{Source: "obsidian"},
@@ -104,7 +73,26 @@ func TestAllowedSources(t *testing.T) {
 			2, // git + claude
 		},
 		{
+			StyleDigest,
+			[]sources.Entry{
+				{Source: "git"},
+				{Source: "obsidian"},
+				{Source: "claude"},
+				{Source: "markdown"},
+			},
+			4, // no filter
+		},
+		{
 			StyleReport,
+			[]sources.Entry{
+				{Source: "git"},
+				{Source: "obsidian"},
+				{Source: "claude"},
+			},
+			3, // no filter
+		},
+		{
+			StyleRetro,
 			[]sources.Entry{
 				{Source: "git"},
 				{Source: "obsidian"},
