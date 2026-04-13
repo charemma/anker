@@ -208,13 +208,14 @@ ikno recap 2025-04-01..2025-04-30
 
 ---
 
-## Plain output and pipes
+## Raw output and pipes
 
-When piped or redirected, ikno produces clean plain text without ANSI codes. Force it explicitly with `--plain`:
+Need the raw activity data for scripts, grep, or your own processing? Use `--raw`:
 
 ```bash
-ikno recap thisweek --plain > this-week.txt
-ikno recap thisweek --plain | grep "git/myrepo"
+ikno recap thisweek --raw > this-week.txt
+ikno recap thisweek --raw | grep "feat"
+ikno recap thisweek --json              # structured JSON
 ```
 
 ---
