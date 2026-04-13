@@ -22,7 +22,8 @@ type Config struct {
 	AIPrompt       string `yaml:"ai_prompt"`              // custom prompt for AI summaries
 	AIBackend      string `yaml:"ai_backend"`             // "api" or "cli"
 	AICLICommand   string `yaml:"ai_cli_command"`         // CLI tool for ai_backend: cli
-	AIDefaultStyle string `yaml:"ai_default_style"`       // default style: self, manager, customer, standup, retro
+	AIDefaultStyle string `yaml:"ai_default_style"`       // default output style: brief, digest, status, report, retro
+	AILanguage     string `yaml:"ai_language"`            // output language passed to AI (e.g. "deutsch", "english")
 }
 
 // DefaultConfig returns the default configuration.

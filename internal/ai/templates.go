@@ -1,6 +1,9 @@
 package ai
 
-import "slices"
+import (
+	"slices"
+	"strings"
+)
 
 // Style identifies a prompt template by output format.
 type Style string
@@ -55,7 +58,15 @@ func DefaultTimespec(style Style) string {
 	return "today"
 }
 
-// Prompt returns the built-in German prompt for the given style.
+// PromptWithLanguage returns the prompt for the given style with the output
+// language injected. The lang value is passed directly to the LLM (e.g.
+// "deutsch", "english", "greek") -- no mapping or validation is applied.
+func PromptWithLanguage(style Style, lang string) string {
+	return strings.ReplaceAll(Prompt(style), "{language}", lang)
+}
+
+// Prompt returns the built-in prompt for the given style with {language}
+// as a placeholder. Use PromptWithLanguage to get a ready-to-use prompt.
 func Prompt(style Style) string {
 	switch style {
 	case StyleBrief:
@@ -82,7 +93,7 @@ git -- commit message. Always include.
 
 ## Output format
 
-Return exactly three sections. German.
+Return exactly three sections. {language}.
 
 **Done**
 2-4 bullets. Completed things only. Format: "<action> in <project/tool>"
@@ -100,7 +111,7 @@ Rules:
 - Name the project: "in anker", "in nixos-config"
 - Active verbs: "implementiert", "gefixt", "dokumentiert" -- not "gearbeitet an"
 - Do not pad with filler bullets if the data is sparse
-- Language: German`
+- Language: {language}`
 
 const promptDigest = `Summarize the developer's activity log as a thematic technical overview.
 
@@ -122,7 +133,7 @@ git -- a commit message. High-signal, always include.
 
 ## Output format
 
-Write in German. No preamble. Start directly with the first bullet.
+Write in {language}. No preamble. Start directly with the first bullet.
 
 Structure:
 - One section per theme (no heading, just bullets grouped together)
@@ -136,7 +147,7 @@ Rules:
 - No vague qualifiers: "intensiv", "erfolgreich", "verschiedene", "einige"
 - If something took > 100 claude minutes, mark with "(groesster Zeitblock)"
 - Skip themes with only 1 low-signal obsidian entry and no commits or claude sessions
-- Language: German`
+- Language: {language}`
 
 const promptReport = `Write a polished formal report from the developer's activity log.
 
@@ -150,7 +161,7 @@ git -- commit message. Translate to outcome language. Merged/shipped work only.
 
 ## Output structure
 
-Write in German. Formal tone. No internal jargon, no tool names unless relevant.
+Write in {language}. Formal tone. No internal jargon, no tool names unless relevant.
 
 ### Fortschritt
 2-4 bullets. Completed items only. Format: "<was abgeschlossen> -- <Mehrwert oder Ergebnis>"
@@ -167,7 +178,7 @@ Rules:
 - No effort metrics (minutes, commit counts)
 - In-progress work does not appear under "Fortschritt"
 - Translate implementation work: "Renderer umgebaut" -> "verbesserte Ausgabequalitaet"
-- Language: German`
+- Language: {language}`
 
 const promptStatus = `Write a progress-focused status update from the developer's activity log.
 
@@ -181,7 +192,7 @@ git -- commit message. Always relevant. Group by repo.
 
 ## Output format
 
-Write in German. Focus on what is done, what is blocked, and what comes next.
+Write in {language}. Focus on what is done, what is blocked, and what comes next.
 
 ### Fortschritt
 3-5 bullets. Completed and in-progress work. Both matter here.
@@ -199,7 +210,7 @@ Rules:
 - No commit hashes or file paths
 - Keep bullets tight -- no explanations, just facts
 - "in Arbeit" means started but not merged/shipped
-- Language: German`
+- Language: {language}`
 
 const promptRetro = `Write a sprint retrospective from the developer's activity log.
 
@@ -213,7 +224,7 @@ git -- commit message. Always relevant. Group by repo.
 
 ## Output format
 
-Write in German. Structured retrospective format.
+Write in {language}. Structured retrospective format.
 
 ### Was lief gut
 2-4 bullets. Things that went smoothly, clear wins, good decisions made.
@@ -234,4 +245,4 @@ Rules:
 - No commit hashes or file paths
 - Be specific, not generic
 - If there is nothing notable for a section, omit it entirely
-- Language: German`
+- Language: {language}`

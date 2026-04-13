@@ -143,12 +143,24 @@ func TestPromptNotEmpty(t *testing.T) {
 	}
 }
 
-func TestPromptContainsGerman(t *testing.T) {
-	// All prompts should instruct German output
+func TestPromptContainsLanguagePlaceholder(t *testing.T) {
+	// All prompts must contain the {language} placeholder so PromptWithLanguage works.
 	for _, style := range validStyles {
 		p := Prompt(style)
-		if !contains(p, "German") && !contains(p, "german") && !contains(p, "Deutsch") {
-			t.Errorf("Prompt(%q) does not mention German language", style)
+		if !contains(p, "{language}") {
+			t.Errorf("Prompt(%q) does not contain {language} placeholder", style)
+		}
+	}
+}
+
+func TestPromptWithLanguage(t *testing.T) {
+	for _, style := range validStyles {
+		p := PromptWithLanguage(style, "english")
+		if contains(p, "{language}") {
+			t.Errorf("PromptWithLanguage(%q, english) still contains {language} placeholder", style)
+		}
+		if !contains(p, "english") {
+			t.Errorf("PromptWithLanguage(%q, english) does not contain injected language", style)
 		}
 	}
 }

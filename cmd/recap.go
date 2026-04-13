@@ -25,6 +25,7 @@ var (
 	recapRaw    bool
 	recapJSON   bool
 	recapStyle  string
+	recapLang   string
 )
 
 var recapCmd = &cobra.Command{
@@ -70,8 +71,11 @@ Examples:
 			return fmt.Errorf("failed to load config: %w", err)
 		}
 
-		// Resolve style: --style flag > config ai_default_style > "self"
+		// Resolve style: --style flag > config ai_default_style > "digest"
 		style := resolveStyle(recapStyle, cfg.AIDefaultStyle)
+
+		// Resolve language: --lang flag > config ai_language > "deutsch"
+		lang := resolveLanguage(recapLang, cfg.AILanguage)
 
 		// Resolve timespec: explicit arg > style default
 		timespec := ai.DefaultTimespec(style)
@@ -147,7 +151,7 @@ Examples:
 		// Resolve prompt: --prompt flag > config ai_prompt > style template
 		promptOverride := recapPrompt
 		if promptOverride == "" && cfg.AIPrompt == "" {
-			promptOverride = string(ai.Prompt(style))
+			promptOverride = ai.PromptWithLanguage(style, lang)
 		}
 
 		period := fmt.Sprintf("%s (%s to %s)", timespec, tr.From.Format("2006-01-02"), tr.To.Format("2006-01-02"))
@@ -161,6 +165,17 @@ Examples:
 			EntryCount:   len(result.Entries),
 		}, promptOverride, recapAPIKey)
 	},
+}
+
+// resolveLanguage returns the effective output language from flag, config, or "deutsch".
+func resolveLanguage(flagValue, configDefault string) string {
+	if flagValue != "" {
+		return flagValue
+	}
+	if configDefault != "" {
+		return configDefault
+	}
+	return "deutsch"
 }
 
 // resolveStyle returns the effective style from flag, config default, or "self".
@@ -245,4 +260,5 @@ func init() {
 	recapCmd.Flags().BoolVar(&recapRaw, "raw", false, "Unformatted entry dump -- for pipes, scripts, grep")
 	recapCmd.Flags().BoolVar(&recapJSON, "json", false, "Structured JSON output")
 	recapCmd.Flags().StringVar(&recapStyle, "style", "", "Summary style: brief, digest, status, report, retro")
+	recapCmd.Flags().StringVar(&recapLang, "lang", "", "Output language (e.g. deutsch, english, greek); default: deutsch")
 }
