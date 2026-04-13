@@ -181,7 +181,7 @@ Examples:
 	},
 }
 
-// loadCustomTemplate looks for ~/.anker/templates/<name>.txt and returns its
+// loadCustomTemplate looks for ~/.anker/templates/<name>.md and returns its
 // contents with {language} injected. Returns (prompt, true, nil) if found,
 // ("", false, nil) if not found, or ("", false, err) on read errors.
 func loadCustomTemplate(name, lang string) (string, bool, error) {
@@ -189,7 +189,7 @@ func loadCustomTemplate(name, lang string) (string, bool, error) {
 	if err != nil {
 		return "", false, err
 	}
-	p := filepath.Join(home, "templates", name+".txt")
+	p := filepath.Join(home, "templates", name+".md")
 	data, err := os.ReadFile(p)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -244,8 +244,8 @@ func runListStyles(w *os.File, verbose bool) error {
 		if entries, err := os.ReadDir(tmplDir); err == nil {
 			var custom []string
 			for _, e := range entries {
-				if !e.IsDir() && strings.HasSuffix(e.Name(), ".txt") {
-					custom = append(custom, strings.TrimSuffix(e.Name(), ".txt"))
+				if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") {
+					custom = append(custom, strings.TrimSuffix(e.Name(), ".md"))
 				}
 			}
 			if len(custom) > 0 {
@@ -259,7 +259,7 @@ func runListStyles(w *os.File, verbose bool) error {
 	}
 
 	_, _ = fmt.Fprintln(w, ui.StyleMuted.Render("Show full prompt: anker recap --styles --verbose"))
-	_, _ = fmt.Fprintln(w, ui.StyleMuted.Render("Add custom style: ~/.anker/templates/<name>.txt"))
+	_, _ = fmt.Fprintln(w, ui.StyleMuted.Render("Add custom style: ~/.anker/templates/<name>.md"))
 	return nil
 }
 
