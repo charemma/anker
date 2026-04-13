@@ -5,12 +5,14 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"sort"
 	"strings"
 
 	"github.com/charemma/anker/internal/ai"
 	"github.com/charemma/anker/internal/config"
+	"github.com/charemma/anker/internal/paths"
 	"github.com/charemma/anker/internal/recap"
 	"github.com/charemma/anker/internal/sources"
 	"github.com/charemma/anker/internal/storage"
@@ -154,10 +156,16 @@ Examples:
 			return fmt.Errorf("failed to render recap: %w", err)
 		}
 
-		// Resolve prompt: --prompt flag > config ai_prompt > style template
+		// Resolve prompt: --prompt flag > config ai_prompt > custom template file > style template
 		promptOverride := recapPrompt
 		if promptOverride == "" && cfg.AIPrompt == "" {
-			promptOverride = ai.PromptWithLanguage(style, lang)
+			if custom, found, err := loadCustomTemplate(string(style), lang); err != nil {
+				return fmt.Errorf("failed to load custom template: %w", err)
+			} else if found {
+				promptOverride = custom
+			} else {
+				promptOverride = ai.PromptWithLanguage(style, lang)
+			}
 		}
 
 		period := fmt.Sprintf("%s (%s to %s)", timespec, tr.From.Format("2006-01-02"), tr.To.Format("2006-01-02"))
@@ -171,6 +179,26 @@ Examples:
 			EntryCount:   len(result.Entries),
 		}, promptOverride, recapAPIKey)
 	},
+}
+
+// loadCustomTemplate looks for ~/.anker/templates/<name>.txt and returns its
+// contents with {language} injected. Returns (prompt, true, nil) if found,
+// ("", false, nil) if not found, or ("", false, err) on read errors.
+func loadCustomTemplate(name, lang string) (string, bool, error) {
+	home, err := paths.GetAnkerHome()
+	if err != nil {
+		return "", false, err
+	}
+	p := filepath.Join(home, "templates", name+".txt")
+	data, err := os.ReadFile(p)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+	prompt := strings.ReplaceAll(string(data), "{language}", lang)
+	return prompt, true, nil
 }
 
 // runListStyles prints all available styles to w.
@@ -209,8 +237,29 @@ func runListStyles(w *os.File, verbose bool) error {
 	}
 
 	_, _ = fmt.Fprintln(w)
+
+	// List custom templates if any exist.
+	if home, err := paths.GetAnkerHome(); err == nil {
+		tmplDir := filepath.Join(home, "templates")
+		if entries, err := os.ReadDir(tmplDir); err == nil {
+			var custom []string
+			for _, e := range entries {
+				if !e.IsDir() && strings.HasSuffix(e.Name(), ".txt") {
+					custom = append(custom, strings.TrimSuffix(e.Name(), ".txt"))
+				}
+			}
+			if len(custom) > 0 {
+				_, _ = fmt.Fprintln(w, ui.StyleMuted.Render("Custom styles:"))
+				for _, name := range custom {
+					_, _ = fmt.Fprintf(w, "  %s\n", ui.StyleMuted.Render(name))
+				}
+				_, _ = fmt.Fprintln(w)
+			}
+		}
+	}
+
 	_, _ = fmt.Fprintln(w, ui.StyleMuted.Render("Show full prompt: anker recap --styles --verbose"))
-	_, _ = fmt.Fprintln(w, ui.StyleMuted.Render("Custom styles:   ~/.anker/templates/<name>.txt"))
+	_, _ = fmt.Fprintln(w, ui.StyleMuted.Render("Add custom style: ~/.anker/templates/<name>.txt"))
 	return nil
 }
 
