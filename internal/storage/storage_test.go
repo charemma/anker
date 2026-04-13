@@ -7,7 +7,7 @@ import (
 
 func TestNewStore(t *testing.T) {
 	tmpDir := t.TempDir()
-	t.Setenv("ANKER_HOME", tmpDir)
+	t.Setenv("IKNO_HOME", tmpDir)
 
 	store, err := NewStore()
 	if err != nil {

@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/charemma/anker/internal/sources"
+	"github.com/charemma/ikno/internal/sources"
 )
 
 // RepoGroup represents entries from a single source location, with

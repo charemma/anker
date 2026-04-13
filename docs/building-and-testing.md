@@ -1,10 +1,10 @@
 # Building and Testing
 
-This guide covers the build system, development workflow, and CI/CD setup for anker.
+This guide covers the build system, development workflow, and CI/CD setup for ikno.
 
 ## Overview
 
-anker uses a **Nix flake** for reproducible builds, tests, and linting. All tools and dependencies are pinned via `flake.lock` -- no manual installation needed.
+ikno uses a **Nix flake** for reproducible builds, tests, and linting. All tools and dependencies are pinned via `flake.lock` -- no manual installation needed.
 
 ## Prerequisites
 
@@ -15,7 +15,7 @@ anker uses a **Nix flake** for reproducible builds, tests, and linting. All tool
 
 ```bash
 # Build the binary
-nix build                    # -> ./result/bin/anker
+nix build                    # -> ./result/bin/ikno
 
 # Run all checks (tests + lint + build + pre-commit)
 nix flake check
@@ -48,11 +48,11 @@ The dev shell includes:
 ## Building
 
 ```bash
-# Reproducible build via Nix (output in ./result/bin/anker)
+# Reproducible build via Nix (output in ./result/bin/ikno)
 nix build
 
 # Quick build during development (from dev shell)
-go build -o bin/anker .
+go build -o bin/ikno .
 
 # Quick run without building
 go run . recap today
@@ -96,6 +96,6 @@ Releases use GoReleaser via `.github/workflows/release.yml` (independent of the 
 
 From the dev shell:
 ```bash
-GOOS=darwin GOARCH=arm64 go build -o bin/anker .   # macOS ARM64
-GOOS=linux GOARCH=amd64 go build -o bin/anker .    # Linux AMD64
+GOOS=darwin GOARCH=arm64 go build -o bin/ikno .   # macOS ARM64
+GOOS=linux GOARCH=amd64 go build -o bin/ikno .    # Linux AMD64
 ```

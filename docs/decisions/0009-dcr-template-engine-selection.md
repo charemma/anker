@@ -157,10 +157,10 @@ def generate(data):
 Support both simple and powerful:
 ```bash
 # Simple: Go templates for basic cases
-anker report --template weekly.tmpl
+ikno report --template weekly.tmpl
 
 # Powerful: Lua for complex reports
-anker report --template client-report.lua
+ikno report --template client-report.lua
 ```
 
 **Good:**
@@ -183,7 +183,7 @@ anker report --template client-report.lua
 
 **1. JSON (Built-in, Go)**
 ```bash
-anker report april --format json
+ikno report april --format json
 ```
 
 - Implemented in Go using `json.Marshal()`
@@ -196,9 +196,9 @@ anker report april --format json
 
 **2. Text Templates (Lua)**
 ```bash
-anker report april                           # Uses embedded markdown.lua
-anker report april --format html             # Uses embedded html.lua
-anker report april --template custom.lua     # User's template
+ikno report april                           # Uses embedded markdown.lua
+ikno report april --format html             # Uses embedded html.lua
+ikno report april --template custom.lua     # User's template
 ```
 
 - All text formatting uses Lua
@@ -215,7 +215,7 @@ anker report april --template custom.lua     # User's template
 Shipped in binary via embedded filesystem:
 
 ```
-anker (binary)
+ikno (binary)
   ├─ templates/
   │   ├─ markdown.lua      # Default, rich formatting
   │   ├─ compact.lua       # Short, for quick review
@@ -234,9 +234,9 @@ function generate(data)
 
   table.insert(output, "# Work Report")
   table.insert(output, string.format("Period: %s - %s\n",
-    anker.format_date(data.from), anker.format_date(data.to)))
+    ikno.format_date(data.from), ikno.format_date(data.to)))
 
-  for repo, entries in pairs(anker.group_by_repo(data)) do
+  for repo, entries in pairs(ikno.group_by_repo(data)) do
     table.insert(output, "\n## " .. repo)
 
     for _, entry in ipairs(entries) do
@@ -255,16 +255,16 @@ end
 
 ```bash
 # View built-in template source
-anker template show markdown
+ikno template show markdown
 
 # Copy built-in as starting point
-anker template copy markdown my-custom.lua
+ikno template copy markdown my-custom.lua
 
 # Edit to customize
-vim ~/.anker/templates/my-custom.lua
+vim ~/.ikno/templates/my-custom.lua
 
 # Use custom template
-anker report april --template my-custom.lua
+ikno report april --template my-custom.lua
 ```
 
 ### Why This Approach
@@ -287,13 +287,13 @@ anker report april --template my-custom.lua
 **Learning path:**
 ```lua
 -- Simple: Use helpers
-return anker.format_markdown(data)
+return ikno.format_markdown(data)
 
 -- Medium: Filter then format
-local filtered = anker.filter(data.entries, function(e)
+local filtered = ikno.filter(data.entries, function(e)
   return not e.content:match("^WIP")
 end)
-return anker.format_markdown({entries = filtered})
+return ikno.format_markdown({entries = filtered})
 
 -- Advanced: Full control
 local output = {}
@@ -308,22 +308,22 @@ return table.concat(output, "\n")
 - Bundle in binary (~2MB overhead)
 - Cross-platform, static compilation works
 
-**Helper Functions (anker.* API):**
+**Helper Functions (ikno.* API):**
 ```lua
 -- Filtering
-anker.filter(entries, predicate)
-anker.filter_by_author(entries, email)
-anker.filter_work_hours(entries)
+ikno.filter(entries, predicate)
+ikno.filter_by_author(entries, email)
+ikno.filter_work_hours(entries)
 
 -- Grouping
-anker.group_by_repo(data)
-anker.group_by_date(data)
-anker.group_by_source(data)
+ikno.group_by_repo(data)
+ikno.group_by_date(data)
+ikno.group_by_source(data)
 
 -- Formatting
-anker.format_date(timestamp, format)
-anker.format_time(timestamp, format)
-anker.format_markdown(data)  -- Quick helper
+ikno.format_date(timestamp, format)
+ikno.format_time(timestamp, format)
+ikno.format_markdown(data)  -- Quick helper
 
 -- Data access
 entry.content, entry.time, entry.source, entry.location
@@ -356,7 +356,7 @@ if entry.time.hour >= 9 and entry.time.hour <= 17 then
 end
 
 -- Group by week, then repo
-local by_week = anker.group_by_week(data)
+local by_week = ikno.group_by_week(data)
 for week, entries in pairs(by_week) do
   -- format week section
 end

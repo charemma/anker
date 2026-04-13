@@ -1,18 +1,18 @@
 # Generating work summaries with AI
 
-anker collects raw activity data. Use `--format ai` to get LLM-generated summaries directly, or pipe output into any LLM CLI.
+ikno collects raw activity data. Use `--format ai` to get LLM-generated summaries directly, or pipe output into any LLM CLI.
 
 ## Built-in AI summary
 
-The simplest way -- anker calls the LLM API directly and streams the response:
+The simplest way -- ikno calls the LLM API directly and streams the response:
 
 ```bash
-anker recap today --format ai
-anker recap thisweek --format ai
-anker recap yesterday --format ai --prompt "Write a standup update."
+ikno recap today --format ai
+ikno recap thisweek --format ai
+ikno recap yesterday --format ai --prompt "Write a standup update."
 ```
 
-This requires an API key and endpoint configured in `~/.anker/config.yaml` or via environment variables. Run `anker config` to set it up. See the config file comments for supported providers (Anthropic, OpenAI, ollama, etc.).
+This requires an API key and endpoint configured in `~/.ikno/config.yaml` or via environment variables. Run `ikno config` to set it up. See the config file comments for supported providers (Anthropic, OpenAI, ollama, etc.).
 
 API key resolution: `--api-key` flag > `AI_API_KEY` env var > config file.
 
@@ -21,7 +21,7 @@ API key resolution: `--api-key` flag > `AI_API_KEY` env var > config file.
 If you have a Claude Pro/Max subscription or another LLM CLI tool, you can use `--format ai` without API credits by switching to the CLI backend:
 
 ```yaml
-# ~/.anker/config.yaml
+# ~/.ikno/config.yaml
 ai_backend: cli
 ai_cli_command: claude -p     # default
 ```
@@ -37,11 +37,11 @@ ai_cli_command: sgpt -s        # shell-gpt
 
 ## Piping to an external LLM CLI
 
-You can also pipe anker output into any LLM CLI tool:
+You can also pipe ikno output into any LLM CLI tool:
 
 ```bash
-anker recap today --format detailed | claude -p 'Summarize my workday.'
-anker recap today --format detailed | llm 'Summarize my workday.'
+ikno recap today --format detailed | claude -p 'Summarize my workday.'
+ikno recap today --format detailed | llm 'Summarize my workday.'
 ```
 
 The `detailed` format works best here -- it includes timestamps and metadata that help the model understand the sequence and context of your work.
@@ -49,7 +49,7 @@ The `detailed` format works best here -- it includes timestamps and metadata tha
 The `markdown` format includes full git diffs for richer context but uses more tokens:
 
 ```bash
-anker recap today --format markdown | claude -p 'Summarize what I worked on. Describe the actual changes, not just commit messages.'
+ikno recap today --format markdown | claude -p 'Summarize what I worked on. Describe the actual changes, not just commit messages.'
 ```
 
 ## Prompt examples
@@ -97,7 +97,7 @@ Group by repository or project.
 Set `ai_prompt` in your config to produce Obsidian-friendly output with wikilinks and tags. This way every recap becomes a connected note in your vault.
 
 ```yaml
-# ~/.anker/config.yaml
+# ~/.ikno/config.yaml
 ai_backend: cli
 ai_cli_command: claude -p
 
@@ -113,7 +113,7 @@ ai_prompt: |
   - Keep it concise
 
   At the end of the document:
-  - Add a line with tags: #recap #anker
+  - Add a line with tags: #recap #ikno
   - Link mentioned projects and tools as [[Wikilinks]]
 ```
 
@@ -123,10 +123,10 @@ Prompt resolution order: `--prompt` flag > `ai_prompt` in config > built-in defa
 
 ## Claude Code rules
 
-The `examples/claude-rules/` directory contains example rules you can copy to `.claude/rules/` to give Claude Code context about anker when it processes your recaps.
+The `examples/claude-rules/` directory contains example rules you can copy to `.claude/rules/` to give Claude Code context about ikno when it processes your recaps.
 
 ```bash
-cp examples/claude-rules/anker-context.md .claude/rules/
+cp examples/claude-rules/ikno-context.md .claude/rules/
 ```
 
 ## Shell alias
@@ -134,9 +134,9 @@ cp examples/claude-rules/anker-context.md .claude/rules/
 If you use the piped approach regularly:
 
 ```bash
-anker-summary() {
-  anker recap "${1:-today}" --format ai
+ikno-summary() {
+  ikno recap "${1:-today}" --format ai
 }
 ```
 
-Then just run `anker-summary` or `anker-summary thisweek`.
+Then just run `ikno-summary` or `ikno-summary thisweek`.

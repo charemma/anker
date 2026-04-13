@@ -1,4 +1,4 @@
-# Demo GIF generation for anker
+# Demo GIF generation for ikno
 
 _default:
     @just --list
@@ -39,7 +39,7 @@ gif:
     fi
     @echo "Creating demo.gif..."
     @echo "(This will take ~60 seconds)"
-    @cd .. && ANKER_HOME=/tmp/anker-demo/.anker vhs resources/demo.tape
+    @cd .. && IKNO_HOME=/tmp/ikno-demo/.config/ikno vhs resources/demo.tape
     @echo "✓ demo.gif created at resources/demo.gif"
 
 # Full workflow: setup + generate GIF

@@ -1,6 +1,6 @@
 # Creating the Demo GIF
 
-This directory contains everything needed to create a demo GIF showing anker in action.
+This directory contains everything needed to create a demo GIF showing ikno in action.
 
 ## Quick Start
 
@@ -24,7 +24,7 @@ just update
 
 A live terminal recording showing:
 
-1. **Intro** - What is anker? #AntiProductivity
+1. **Intro** - What is ikno? #AntiProductivity
 2. **Add sources** - Git repo + markdown notes
 3. **List sources** - See configured sources
 4. **Simple recap** - Quick daily summary (with glow)
@@ -55,13 +55,13 @@ A live terminal recording showing:
 Run from the `resources/` directory:
 
 - `just install` - Install vhs and glow via brew
-- `just setup` - Create test data in /tmp/anker-demo/
+- `just setup` - Create test data in /tmp/ikno-demo/
 - `just gif` - Create demo.gif (~60 seconds)
 - `just update` - Run setup + gif in one command
 
 ## Notes
 
-- Demo uses isolated environment: `ANKER_HOME=/tmp/anker-demo/.anker`
-- Your actual anker config remains untouched
+- Demo uses isolated environment: `IKNO_HOME=/tmp/ikno-demo/.config/ikno`
+- Your actual ikno config remains untouched
 - Test notes are created with today's timestamp
 - All commands are executed for real (not mocked)

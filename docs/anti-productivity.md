@@ -27,9 +27,9 @@ But reality is more complex. Human work is rarely linear, especially in software
 - context switches are natural in knowledge work
 - impact doesn't scale with minutes logged
 
-## How anker Fits In
+## How ikno Fits In
 
-anker is designed to:
+ikno is designed to:
 1. Reconstruct your work from your existing source of truth (like Git)
 2. Provide a *narrative recap* in natural text
 3. Encourage reflection instead of performance anxiety

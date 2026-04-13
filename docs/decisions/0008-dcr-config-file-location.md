@@ -6,32 +6,32 @@
 
 ## Problem
 
-Where should anker read its configuration? Need a predictable location that's also flexible for testing and multi-environment setups.
+Where should ikno read its configuration? Need a predictable location that's also flexible for testing and multi-environment setups.
 
 ## Options Considered
 
-**`~/.anker/config.toml` with `ANKER_HOME` override:**
+**`~/.ikno/config.toml` with `IKNO_HOME` override:**
 - Good: Predictable default location
 - Good: Environment variable for flexibility
 - Good: Follows XDG-like pattern
-- Good: Easy for tests (set ANKER_HOME to temp dir)
+- Good: Easy for tests (set IKNO_HOME to temp dir)
 - Good: Multi-environment support
 - Good: Like git's GIT_CONFIG_GLOBAL pattern
 - Bad: Need to document env var
 
-**Fixed `~/.anker/config.toml` only:**
+**Fixed `~/.ikno/config.toml` only:**
 - Good: Simple, predictable
 - Bad: No test isolation
 - Bad: No multi-environment support
 - Bad: Hard to override
 
-**XDG Base Directory (`~/.config/anker/`):**
+**XDG Base Directory (`~/.config/ikno/`):**
 - Good: Standards-compliant (XDG)
-- Bad: Less discoverable than ~/.anker
+- Bad: Less discoverable than ~/.ikno
 - Bad: More directories to navigate
 - Bad: Not all users familiar with XDG
 
-**Per-directory `.anker` config:**
+**Per-directory `.ikno` config:**
 - Good: Project-specific settings
 - Bad: Config scattered everywhere
 - Bad: Harder to manage
@@ -39,15 +39,15 @@ Where should anker read its configuration? Need a predictable location that's al
 
 ## Decision
 
-We chose **`~/.anker/config.toml`** with **`ANKER_HOME`** environment variable override.
+We chose **`~/.ikno/config.toml`** with **`IKNO_HOME`** environment variable override.
 
 Why: Predictable default, flexible when needed, follows git pattern.
 
-**Default:** `~/.anker/config.toml`
-**Override:** `export ANKER_HOME=/custom/path` → `/custom/path/config.toml`
+**Default:** `~/.ikno/config.toml`
+**Override:** `export IKNO_HOME=/custom/path` → `/custom/path/config.toml`
 **Structure:**
 ```
-~/.anker/           # or $ANKER_HOME
+~/.ikno/           # or $IKNO_HOME
   config.toml       # main config
   sources.toml      # tracked sources
   templates/        # user templates

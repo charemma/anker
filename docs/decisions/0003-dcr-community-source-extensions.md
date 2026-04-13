@@ -10,9 +10,9 @@ Community users want to track data from sources beyond git/markdown (Jira, Slack
 
 ## Options Considered
 
-**Executable plugins** (`anker-source-<type>` binaries):
+**Executable plugins** (`ikno-source-<type>` binaries):
 - Good: Language-agnostic (Python, Go, Rust, shell)
-- Good: Isolated (crashes don't affect anker)
+- Good: Isolated (crashes don't affect ikno)
 - Good: Simple JSON protocol
 - Good: No version conflicts
 - Good: No dependency hell
@@ -46,7 +46,7 @@ We chose **executable plugins**.
 
 Why: Language-agnostic, isolated, simple protocol, extensible.
 
-**Naming:** `anker-source-jira`, `anker-source-slack`
+**Naming:** `ikno-source-jira`, `ikno-source-slack`
 **Protocol:** JSON via stdout
 **Discovery:** Auto-discover in `$PATH`
 

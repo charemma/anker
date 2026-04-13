@@ -32,7 +32,7 @@ We chose **Option B**.
 
 Nix flakes replace both Dagger and Just. The Nix CLI (`nix build`, `nix flake check`, `nix develop`) is direct enough that a wrapper layer adds no value. The flake provides:
 
-- `packages.default` -- anker binary via `buildGoModule`
+- `packages.default` -- ikno binary via `buildGoModule`
 - `checks.tests` -- `go test ./...`
 - `checks.lint` -- golangci-lint
 - `checks.build` -- the package itself

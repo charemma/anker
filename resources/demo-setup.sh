@@ -1,18 +1,18 @@
 #!/bin/bash
 set -e
 
-echo "Setting up anker demo environment..."
+echo "Setting up ikno demo environment..."
 
 # Clean previous demo
-rm -rf /tmp/anker-demo
-mkdir -p /tmp/anker-demo/notes
+rm -rf /tmp/ikno-demo
+mkdir -p /tmp/ikno-demo/notes
 
 # Get today's date
 TODAY=$(date +%Y-%m-%d)
 TODAY_DISPLAY=$(date "+%B %d, %Y")
 
 # Create realistic work notes for today
-cat > /tmp/anker-demo/notes/${TODAY}.md << EOF
+cat > /tmp/ikno-demo/notes/${TODAY}.md << EOF
 # HTB Machine: Boardlight
 
 Target: 10.10.11.23
@@ -123,14 +123,14 @@ Time to enumerate for user creds and find the flags.
 EOF
 
 # Set file timestamp to today
-touch /tmp/anker-demo/notes/${TODAY}.md
+touch /tmp/ikno-demo/notes/${TODAY}.md
 
 echo ""
 echo "✓ Demo environment ready!"
 echo ""
 echo "Demo data:"
-echo "  - Notes: /tmp/anker-demo/notes/${TODAY}.md"
-echo "  - Git repo: ~/code/anker (will be used as source)"
+echo "  - Notes: /tmp/ikno-demo/notes/${TODAY}.md"
+echo "  - Git repo: ~/code/ikno (will be used as source)"
 echo ""
 echo "Next steps:"
 echo "  1. Review/edit demo.tape if needed"

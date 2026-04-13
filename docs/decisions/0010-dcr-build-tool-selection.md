@@ -30,7 +30,7 @@ tasks:
   lint:
     cmds: [golangci-lint run]
   build:
-    cmds: [go build -o bin/anker .]
+    cmds: [go build -o bin/ikno .]
 ```
 
 **Good:**
@@ -57,7 +57,7 @@ test:
 lint:
 	golangci-lint run
 build:
-	go build -o bin/anker .
+	go build -o bin/ikno .
 ```
 
 **Good:**
@@ -83,7 +83,7 @@ test:
 lint:
     golangci-lint run
 build:
-    go build -o bin/anker .
+    go build -o bin/ikno .
 ```
 
 **Good:**
@@ -205,9 +205,9 @@ tasks:
       - golangci-lint run
 
   build:
-    desc: Build anker binary
+    desc: Build ikno binary
     cmds:
-      - go build -o bin/anker .
+      - go build -o bin/ikno .
 
   check:
     desc: Run all quality checks (tests, lint, build)

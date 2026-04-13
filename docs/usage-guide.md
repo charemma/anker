@@ -1,6 +1,6 @@
 # Usage Guide
 
-Complete guide to using anker's features.
+Complete guide to using ikno's features.
 
 ## Managing Data Sources
 
@@ -8,42 +8,42 @@ Complete guide to using anker's features.
 
 **Git repositories:**
 ```bash
-anker source add git ~/code/my-project
-anker source add git .  # current directory
+ikno source add git ~/code/my-project
+ikno source add git .  # current directory
 
 # Filter by author (default: git config user.email)
-anker source add git . --author you@work.com
-anker source add git . --author foo@work.com --author bar@personal.com
+ikno source add git . --author you@work.com
+ikno source add git . --author foo@work.com --author bar@personal.com
 ```
 
-By default, anker uses your `git config --global user.email` to filter commits. You can override this with `--author` or set `author_email` in `~/.anker/config.yaml`.
+By default, ikno uses your `git config --global user.email` to filter commits. You can override this with `--author` or set `author_email` in `~/.ikno/config.yaml`.
 
 **Markdown notes:**
 ```bash
 # Filter by tags
-anker source add markdown ~/Obsidian/Daily --tags work,done
+ikno source add markdown ~/Obsidian/Daily --tags work,done
 
 # Filter by headings
-anker source add markdown ~/notes --headings "## Work,## Done"
+ikno source add markdown ~/notes --headings "## Work,## Done"
 ```
 
 **Obsidian vault:**
 ```bash
-anker source add obsidian ~/Obsidian/MyVault
-anker source add obsidian ~/Documents/"Second Brain"
+ikno source add obsidian ~/Obsidian/MyVault
+ikno source add obsidian ~/Documents/"Second Brain"
 ```
 
 ### Managing Sources
 
 **List all sources:**
 ```bash
-anker source list
+ikno source list
 ```
 
 **Remove sources:**
 ```bash
-anker source remove ~/code/my-project
-anker source remove git ~/code/my-project  # if path is ambiguous
+ikno source remove ~/code/my-project
+ikno source remove git ~/code/my-project  # if path is ambiguous
 ```
 
 ## Generating Reports
@@ -60,41 +60,41 @@ anker source remove git ~/code/my-project  # if path is ambiguous
 
 **Specific dates:**
 ```bash
-anker recap 2025-12-01                    # Single day
-anker recap 2025-12-01..2025-12-31        # Date range
+ikno recap 2025-12-01                    # Single day
+ikno recap 2025-12-01..2025-12-31        # Date range
 ```
 
 **Named periods:**
 ```bash
-anker recap "last 7 days"
-anker recap "week 52"
-anker recap "october 2025"
-anker recap "dezember 2025"  # German month names supported
+ikno recap "last 7 days"
+ikno recap "week 52"
+ikno recap "october 2025"
+ikno recap "dezember 2025"  # German month names supported
 ```
 
 ### Output Formats
 
 **Simple (default):**
 ```bash
-anker recap today
+ikno recap today
 ```
 Bullet list of activities.
 
 **Detailed:**
 ```bash
-anker recap today --format detailed
+ikno recap today --format detailed
 ```
 Includes timestamps and metadata.
 
 **JSON:**
 ```bash
-anker recap today --format json
+ikno recap today --format json
 ```
 Structured data for further processing.
 
 **Markdown (with git diffs):**
 ```bash
-anker recap today --format markdown
+ikno recap today --format markdown
 ```
 
 This format includes **full git diffs** for each commit, making it ideal for:
@@ -106,7 +106,7 @@ This format includes **full git diffs** for each commit, making it ideal for:
 ```
 # Work Report: 2026-02-09
 
-## Git: /Users/you/code/anker (2 commits)
+## Git: /Users/you/code/ikno (2 commits)
 
 ### 2026-02-09 14:23 - Fix authentication bug
 Author: you@example.com
@@ -128,39 +128,39 @@ Claude can see the actual code changes and generate more accurate summaries, rel
 
 ```bash
 # Generate standup notes with code context
-anker recap yesterday --format markdown | claude -p "Create concise standup notes"
+ikno recap yesterday --format markdown | claude -p "Create concise standup notes"
 
 # Weekly report with actual changes
-anker recap thisweek --format markdown | claude -p "Write a professional weekly status report"
+ikno recap thisweek --format markdown | claude -p "Write a professional weekly status report"
 
 # Code review (requires markdown format for diffs)
-anker recap today --format markdown | claude -p "Review these changes and suggest improvements"
+ikno recap today --format markdown | claude -p "Review these changes and suggest improvements"
 
 # Full pipeline: analyze → summarize → render
-anker recap thisweek --format markdown | claude -p "Summarize my week" | glow -p
+ikno recap thisweek --format markdown | claude -p "Summarize my week" | glow -p
 
 # Ask technical questions about your work
-anker recap thisweek --format markdown | claude -p "Are there any potential bugs or security issues in these changes?"
+ikno recap thisweek --format markdown | claude -p "Are there any potential bugs or security issues in these changes?"
 ```
 
 ### Pretty Terminal Output
 
 ```bash
 # Render with glow
-anker recap thisweek --format markdown | glow -
+ikno recap thisweek --format markdown | glow -
 
 # Interactive pager
-anker recap thisweek --format markdown | glow -p
+ikno recap thisweek --format markdown | glow -p
 
 # Syntax highlighting with bat
-anker recap today --format markdown | bat -l markdown
+ikno recap today --format markdown | bat -l markdown
 ```
 
 ### Save and Process
 
 ```bash
 # Save to file
-anker recap "December 2025" --format markdown > monthly-report.md
+ikno recap "December 2025" --format markdown > monthly-report.md
 
 # View later
 glow monthly-report.md
@@ -175,17 +175,17 @@ cat monthly-report.md | claude -p "Create release notes"
 
 **Custom config directory:**
 ```bash
-export ANKER_HOME=/path/to/custom/config
-anker recap today  # uses /path/to/custom/config instead of ~/.anker
+export IKNO_HOME=/path/to/custom/config
+ikno recap today  # uses /path/to/custom/config instead of ~/.ikno
 ```
 
 ### Filtering Git Commits
 
-By default, anker filters commits by your git user.email. You can override this:
+By default, ikno filters commits by your git user.email. You can override this:
 
 **Global override:**
 ```yaml
-# ~/.anker/config.yaml
+# ~/.ikno/config.yaml
 author_email: you@work.com
 week_start: monday  # or sunday
 ```
@@ -201,7 +201,7 @@ git config --global user.email
 
 **Check your sources:**
 ```bash
-anker source list
+ikno source list
 ```
 
 **Verify git authorship:**
@@ -213,7 +213,7 @@ git config --global user.email
 **Check time range:**
 ```bash
 # Make sure you have activity in the specified period
-anker recap "last 30 days"  # Broader range
+ikno recap "last 30 days"  # Broader range
 ```
 
 ### Source validation errors

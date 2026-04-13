@@ -1,11 +1,11 @@
 #!/bin/sh
 set -e
 
-# anker installer script
-# Usage: curl -sSL https://charemma.de/anker/install.sh | sh
+# ikno installer script
+# Usage: curl -sSL https://charemma.de/ikno/install.sh | sh
 
-VERSION="${ANKER_VERSION:-latest}"
-INSTALL_DIR="${ANKER_INSTALL_DIR:-/usr/local/bin}"
+VERSION="${IKNO_VERSION:-latest}"
+INSTALL_DIR="${IKNO_INSTALL_DIR:-/usr/local/bin}"
 
 # Detect OS and architecture
 OS="$(uname -s)"
@@ -39,17 +39,17 @@ esac
 
 # Get latest version if not specified
 if [ "$VERSION" = "latest" ]; then
-    VERSION=$(curl -sSL https://api.github.com/repos/charemma/anker/releases/latest | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
+    VERSION=$(curl -sSL https://api.github.com/repos/charemma/ikno/releases/latest | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
     if [ -z "$VERSION" ]; then
         echo "Failed to get latest version"
         exit 1
     fi
 fi
 
-TARBALL="anker_${VERSION}_${OS}_${ARCH}.tar.gz"
-DOWNLOAD_URL="https://github.com/charemma/anker/releases/download/v${VERSION}/${TARBALL}"
+TARBALL="ikno_${VERSION}_${OS}_${ARCH}.tar.gz"
+DOWNLOAD_URL="https://github.com/charemma/ikno/releases/download/v${VERSION}/${TARBALL}"
 
-echo "Downloading anker v${VERSION} for ${OS}/${ARCH}..."
+echo "Downloading ikno v${VERSION} for ${OS}/${ARCH}..."
 echo "URL: ${DOWNLOAD_URL}"
 
 # Download and extract
@@ -66,15 +66,15 @@ else
 fi
 
 # Extract binary
-tar -xzf "$TARBALL" anker
+tar -xzf "$TARBALL" ikno
 
 # Install
 echo "Installing to ${INSTALL_DIR}..."
 if [ -w "$INSTALL_DIR" ]; then
-    mv anker "$INSTALL_DIR/anker"
+    mv ikno "$INSTALL_DIR/ikno"
 else
     echo "Requesting sudo access to install to ${INSTALL_DIR}..."
-    sudo mv anker "$INSTALL_DIR/anker"
+    sudo mv ikno "$INSTALL_DIR/ikno"
 fi
 
 # Cleanup
@@ -82,9 +82,9 @@ cd - > /dev/null
 rm -rf "$TMP_DIR"
 
 echo ""
-echo "anker v${VERSION} installed successfully!"
-echo "Run 'anker --version' to verify"
+echo "ikno v${VERSION} installed successfully!"
+echo "Run 'ikno --version' to verify"
 echo ""
 echo "Get started:"
-echo "  anker source add git ."
-echo "  anker recap today"
+echo "  ikno source add git ."
+echo "  ikno recap today"

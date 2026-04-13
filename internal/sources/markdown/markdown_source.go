@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charemma/anker/internal/sources"
+	"github.com/charemma/ikno/internal/sources"
 )
 
 var tagRegex = regexp.MustCompile(`#(\w+)|\[\[([^\]]+)\]\]`)

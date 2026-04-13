@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/charemma/anker/internal/paths"
-	"github.com/charemma/anker/internal/sources"
+	"github.com/charemma/ikno/internal/paths"
+	"github.com/charemma/ikno/internal/sources"
 	"gopkg.in/yaml.v3"
 )
 
@@ -20,12 +20,12 @@ type Store struct {
 }
 
 // NewStore creates a new Store instance.
-// The base directory can be set via ANKER_HOME environment variable,
-// otherwise defaults to ~/.anker
+// The base directory can be set via IKNO_HOME environment variable,
+// otherwise defaults to ~/.config/ikno/
 func NewStore() (*Store, error) {
-	baseDir, err := paths.GetAnkerHome()
+	baseDir, err := paths.GetConfigDir()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get anker home directory: %w", err)
+		return nil, fmt.Errorf("failed to get ikno config directory: %w", err)
 	}
 
 	if err := os.MkdirAll(baseDir, 0755); err != nil {
@@ -133,7 +133,7 @@ func (s *Store) RemoveSourceByPath(path string) (*sources.Config, error) {
 		for i, m := range matches {
 			types[i] = m.Type
 		}
-		return nil, fmt.Errorf("multiple sources found for path %s (%v). Use 'anker source remove <type> <path>' to specify", path, types)
+		return nil, fmt.Errorf("multiple sources found for path %s (%v). Use 'ikno source remove <type> <path>' to specify", path, types)
 	}
 
 	registry.Sources = filtered

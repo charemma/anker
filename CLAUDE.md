@@ -44,27 +44,27 @@ internal/
     git/               -- GitSource: commits via git log, diff enrichment for markdown format
     markdown/          -- MarkdownSource: extracts tagged lines/sections from .md files
     obsidian/          -- ObsidianSource: tracks vault file changes by timestamp
-  config/              -- User config from ~/.anker/config.yaml (week_start, author_email)
-  storage/             -- Store manages ~/.anker/sources.yaml (add/list/remove sources)
+  config/              -- User config from ~/.config/ikno/config.yaml (week_start, author_email)
+  storage/             -- Store manages ~/.config/ikno/sources.yaml (add/list/remove sources)
   timerange/           -- Flexible time spec parser (today, thisweek, "october 2025", date ranges)
     locales/           -- Multilingual month name support (en, de); add new locales here
   git/                 -- Git helpers: FindRepoRoot, GetAuthorEmail from git config
-  paths/               -- GetAnkerHome() resolves ANKER_HOME env var or defaults to ~/.anker
+  paths/               -- GetConfigDir() resolves IKNO_HOME env var or defaults to ~/.config/ikno
 ```
 
 Key patterns:
 - Source interface allows adding new data source types without changing core code. Implement in `internal/sources/<type>/`, wire up in `cmd/source.go`.
 - `cmd/recap.go` collects entries from all sources, sorts by timestamp, and formats output. The markdown format enriches git entries with full diffs.
 - `internal/timerange` parses human-friendly time specs into `TimeRange{From, To}`. Locale-aware month names are registered in `locales/`.
-- Config resolution chain: CLI flags > `~/.anker/config.yaml` > git config fallback (for author_email).
+- Config resolution chain: CLI flags > `~/.config/ikno/config.yaml` > git config fallback (for author_email).
 
 ## Storage
 
-All state lives in `~/.anker/` (overridable via `ANKER_HOME` env var):
+All state lives in `~/.config/ikno/` (overridable via `IKNO_HOME` env var):
 - `config.yaml` -- user configuration (week_start, author_email)
 - `sources.yaml` -- registered data sources with type, path, metadata
 
-Tests use `ANKER_HOME` pointed at `t.TempDir()` to isolate filesystem state.
+Tests use `IKNO_HOME` pointed at `t.TempDir()` to isolate filesystem state.
 
 ## Build system
 

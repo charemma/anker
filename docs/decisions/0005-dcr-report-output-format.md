@@ -79,8 +79,8 @@ Current hardcoded text output doesn't meet these needs. Users have to manually r
 
 **Potential usage:**
 ```bash
-anker report thisweek --format markdown       # built-in
-anker report thisweek --template client-timesheet  # user custom
+ikno report thisweek --format markdown       # built-in
+ikno report thisweek --template client-timesheet  # user custom
 ```
 
 **Open questions:**
@@ -88,7 +88,7 @@ anker report thisweek --template client-timesheet  # user custom
 - Should we start simple (fixed formats) and add templating later?
 - What built-in formats should we provide initially?
 - How do we handle template errors clearly?
-- Where to store templates? (`~/.anker/templates/`?)
+- Where to store templates? (`~/.ikno/templates/`?)
 - Do we need template validation on add?
 
 This needs user research and validation before deciding on implementation.

@@ -49,7 +49,7 @@ We chose **text files** (TOML format).
 Why: Git/cloud sync, human-readable, aligns with transparency principle.
 
 ```
-~/.anker/
+~/.ikno/
   config.toml
   sources.toml
   entries/*.md

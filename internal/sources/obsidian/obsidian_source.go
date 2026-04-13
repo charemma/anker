@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charemma/anker/internal/sources"
+	"github.com/charemma/ikno/internal/sources"
 )
 
 // ObsidianSource implements the Source interface for Obsidian vaults.

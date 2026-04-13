@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charemma/anker/internal/sources"
-	"github.com/charemma/anker/internal/sources/claude"
-	"github.com/charemma/anker/internal/sources/git"
-	"github.com/charemma/anker/internal/sources/markdown"
-	"github.com/charemma/anker/internal/sources/obsidian"
+	"github.com/charemma/ikno/internal/sources"
+	"github.com/charemma/ikno/internal/sources/claude"
+	"github.com/charemma/ikno/internal/sources/git"
+	"github.com/charemma/ikno/internal/sources/markdown"
+	"github.com/charemma/ikno/internal/sources/obsidian"
 )
 
 // createSource instantiates a Source from a stored Config.

@@ -14,3 +14,7 @@ result
 # Demo
 resources/demo.gif
 .pre-commit-config.yaml
+
+# Local output files
+today.md
+recap.md

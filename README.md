@@ -1,167 +1,172 @@
-<div align="center">
-  <img src="logo.png" alt="anker logo" width="200"/>
+# ikno
 
-  # anker
+> Your workday, reconstructed.
 
-  > a fixpoint for your work
-</div>
-
-**anker** is a local CLI tool that helps you remember what you actually did — without time tracking, productivity metrics, or background agents.
-
-**About this project:** anker is built in collaboration with Claude AI as a demonstration of modern AI-assisted development practices. The goal is to explore how AI can accelerate software development while producing genuinely useful tools.
-
-## Why anker?
-
-Work happens across multiple git repositories, scattered notes, meetings, and unplanned tasks. At the end of the day, the hard part isn't always doing the work — it's **explaining and remembering what actually happened**.
-
-**anker accepts the chaos.** You cannot plan everything in advance — production incidents happen, requirements change, bugs emerge. anker helps you reconstruct your workday after the fact, without judgment or optimization.
-
-## Philosophy
-
-Most productivity tools focus on *measuring* time, activities, or output. They ask you to track every minute, optimize every task, and chase efficiency metrics.
-
-**anker takes a different approach.**
-
-Instead of chasing classic productivity metrics, anker embraces what we call an **#AntiProductivity mindset** — focusing on understanding *what you actually did* rather than how many minutes you logged or how much you planned/optimized.
-
-The goal is not to make you faster, but to help you reflect on your work in a human-centric, meaningful way. anker reconstructs your day from the sources of truth you already have (like Git), and turns your work into readable, narrative summaries.
-
-This aligns with the belief that:
-- Productivity is not about *more*.
-- It's about *clarity*, *context* and *value*.
-
-[Read more about the AntiProductivity mindset →](docs/anti-productivity.md)
-
-### Core Principles
-
-- **Deferred analysis** — work first, summarize later
-- **Explicit over implicit** — nothing is tracked automatically
-- **Local & transparent** — all data stays on your machine
-- **Text-first** — human-readable storage
-
-## Demo
-
-<div align="center">
-  <img src="resources/demo.gif" alt="anker demo" width="100%"/>
-</div>
-
-## Quick Start
-
-### Installation
-
-**One-line install (macOS/Linux):**
-```bash
-curl -sSL https://charemma.de/anker/install.sh | sh
-```
-
-**Or download from [GitHub Releases](https://github.com/charemma/anker/releases)**
-
-**Or using Go:**
-```bash
-go install github.com/charemma/anker@latest
-```
-
-### Basic Usage
-
-```bash
-# Add your git repositories (one-time setup)
-anker source add git ~/code/my-project
-anker source add git .
-
-# Generate a report
-anker recap today
-anker recap thisweek
-anker recap lastmonth
-```
-
-### Example Output
-
-```bash
-anker recap yesterday --format simple
-```
-
-```
-2026-02-09 (2 activities)
-  • Fix authentication bug in user service
-  • Update README with installation instructions
-```
-
-### Integration with AI
-
-**Markdown format includes full git diffs** - perfect for AI to understand actual code changes:
-
-```bash
-# Generate standup notes with code context
-anker recap yesterday --format markdown | claude -p "Create standup notes"
-
-# Full pipeline: analyze → summarize → render
-anker recap thisweek --format markdown | claude -p "Summarize my week" | glow -p
-
-# Code review with full diffs (markdown format includes all code changes)
-anker recap today --format markdown | claude -p "Review these changes and suggest improvements"
-```
-
-See [Usage Guide](docs/usage-guide.md#output-formats) for more examples and format details.
-
-## Supported Data Sources
-
-**The quality of anker's output depends on your data sources.** The more comprehensive your sources, the better anker can reconstruct your workday.
-
-**Currently supported:**
-- **Git repositories** — commits from tracked repos
-- **Markdown files** — notes with tag or heading filters
-- **Obsidian vaults** — modified/created files by timestamp
-
-**Planned sources:**
-Calendar events, browser history, issue trackers (Jira, Linear, GitHub Issues), communication tools.
-
-**We need your help!** If you have ideas for additional sources, please [open an issue](https://github.com/charemma/anker/issues) or contribute via pull request.
-
-## Documentation
-
-- **[Usage Guide](docs/usage-guide.md)** - Complete command reference, examples, integrations
-- **[Configuration](docs/configuration.md)** - Config options, environment variables
-- **[Building & Testing](docs/building-and-testing.md)** - Nix flake build system, CI/CD
-- **[Architecture Decisions](docs/decisions/)** - Design rationale and ADRs
-- **[Roadmap](TODO.md)** - Planned features and improvements
-
-## Privacy & Data
-
-**anker has no default data sources.** Every source must be explicitly added by you with `anker source add`. anker does not monitor your system or collect data automatically.
-
-**Your data stays local:**
-- No telemetry, no analytics, no cloud sync
-- All storage in plain text files (`~/.anker/`)
-- Human-readable YAML and Markdown
-- No background processes or filesystem watchers
-
-## Contributing
-
-We're in the early stages and welcome contributions! Whether it's:
-- New data source providers
-- Bug fixes and improvements
-- Documentation enhancements
-- Feature ideas
-
-See our [Issue Templates](https://github.com/charemma/anker/issues/new/choose) to get started.
-
-## What anker is NOT
-
-- Not a time tracker
-- Not a productivity optimizer
-- Not a background daemon
-- Not a cloud service
-- Not a monitoring tool
-
-## License
-
-Apache 2.0 — see [LICENSE](LICENSE) for details.
+From git, notes, and AI sessions -- in one command.
 
 ---
 
-**Get started now:**
-```bash
-curl -sSL https://charemma.de/anker/install.sh | sh
-anker source add git .
-anker recap today
 ```
+$ ikno recap thisweek
+
+Week 15  (7-11 April)   24 activities across 4 sources
+
+Monday, 7 April         3 activities
+
+  git/ikno      2 commits  (1 feat, 1 fix)
+  claude        1 session  smart-source-detection
+
+Tuesday, 8 April        5 activities
+
+  git/ikno      3 commits  (1 feat, 2 test)
+  git/nixos     1 commit   (1 chore)
+  obsidian      1 note
+
+Wednesday, 9 April      -
+
+Thursday, 10 April      8 activities
+
+  git/ikno      4 commits  (2 feat, 1 refactor, 1 fix)   +892 -234
+  git/dotfiles  2 commits  (1 feat, 1 chore)             +47 -12
+  obsidian      2 notes
+
+Friday, 11 April        8 activities
+
+  git/ikno      3 commits  (1 feat, 1 docs, 1 fix)
+  claude        2 sessions
+  obsidian      3 notes
+
+24 entries · ikno (12), nixos (1), dotfiles (2), claude (3), obsidian (6)
+```
+
+---
+
+## Install
+
+**Nix:**
+```bash
+nix run github.com/charemma/ikno
+```
+
+**Go:**
+```bash
+go install github.com/charemma/ikno@latest
+```
+
+**Homebrew:**
+```bash
+brew install charemma/tap/ikno
+```
+
+---
+
+## Quick start
+
+```bash
+ikno init
+ikno recap thisweek
+```
+
+`ikno init` detects git repos in your current directory, Claude Code sessions in `~/.claude/projects/`, and an Obsidian vault if one is configured. You can add more sources explicitly at any time.
+
+---
+
+## Sources
+
+ikno reconstructs your day from the data you already generate:
+
+- **Git** -- commits from any tracked repo, with diff stats
+- **Markdown** -- tagged lines or sections from any `.md` file
+- **Obsidian** -- files modified or created in your vault
+- **Claude Code** -- AI coding sessions from `~/.claude/projects/`
+
+Add sources explicitly when auto-detection is not enough:
+
+```bash
+ikno source add git ~/code/my-project
+ikno source add obsidian ~/Documents/Notes
+ikno source list
+```
+
+---
+
+## AI summaries
+
+ikno generates narrative summaries from your activity data. The default style (`digest`) produces a full technical overview. Other styles fit different contexts:
+
+```bash
+ikno recap today --style brief       # Done / Next / Blockers -- 5-10 lines
+ikno recap thisweek                  # digest (default) -- 12-18 lines
+ikno recap thisweek --style status   # Progress / Blockers / Next
+ikno recap thisweek --style report   # Polished prose, deliveries first
+ikno recap thisweek --style retro    # Retrospective format
+```
+
+**Language:** ikno writes summaries in the language you configure, or German by default.
+
+```bash
+ikno recap thisweek --lang en
+```
+
+**Your own AI backend:** ikno uses your existing setup. If Ollama is running locally, it uses that. Otherwise it falls back to any configured API key. No account required, no data leaves your machine unless you choose.
+
+**Custom templates:** Drop a `.md` file in `~/.config/ikno/templates/` to define your own style:
+
+```bash
+ikno recap --styles            # list built-in and custom styles
+ikno recap thisweek --style weekly-email
+```
+
+---
+
+## Time ranges
+
+```bash
+ikno recap today
+ikno recap yesterday
+ikno recap thisweek
+ikno recap lastweek
+ikno recap "april 2025"
+ikno recap 2025-04-01..2025-04-30
+```
+
+---
+
+## Plain output and pipes
+
+When piped or redirected, ikno produces clean plain text without ANSI codes. Force it explicitly with `--plain`:
+
+```bash
+ikno recap thisweek --plain > this-week.txt
+ikno recap thisweek --plain | grep "git/myrepo"
+```
+
+---
+
+## Configuration
+
+```yaml
+# ~/.config/ikno/config.yaml
+week_start: monday
+author_email: you@example.com
+ai_default_style: digest
+ai_language: en
+```
+
+---
+
+## Philosophy
+
+Most productivity tools ask you to track everything up front -- every minute, every switch, every task. ikno does not.
+
+You work normally. At the end of the day (or week), you run one command and get a readable account of what actually happened. No timers, no categories, no logging discipline required.
+
+The insight behind ikno: the traces are already there. Git commits, session histories, timestamped notes -- your work leaves marks. ikno reads those marks and turns them into something you can read, share, or think with.
+
+No background agents. No cloud sync. Everything stays in `~/.config/ikno/`.
+
+---
+
+## License
+
+Apache 2.0 -- see [LICENSE](LICENSE) for details.

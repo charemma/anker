@@ -42,7 +42,7 @@ Quick to scan, easy to understand the reasoning.
 ### Technical Choices
 - [0006-dcr-cli-framework-selection.md](0006-dcr-cli-framework-selection.md) - CLI framework selection
 - [0007-dcr-data-storage-strategy.md](0007-dcr-data-storage-strategy.md) - Text files with TOML format
-- [0008-dcr-config-file-location.md](0008-dcr-config-file-location.md) - Config location and ANKER_HOME
+- [0008-dcr-config-file-location.md](0008-dcr-config-file-location.md) - Config location and IKNO_HOME
 - [0009-dcr-template-engine-selection.md](0009-dcr-template-engine-selection.md) - Template system for reports
 - [0010-dcr-build-tool-selection.md](0010-dcr-build-tool-selection.md) - Task runner (superseded by 0012)
 - [0011-dcr-code-quality-enforcement.md](0011-dcr-code-quality-enforcement.md) - CI/CD and quality gates

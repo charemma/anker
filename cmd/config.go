@@ -6,16 +6,16 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/charemma/anker/internal/ai"
-	"github.com/charemma/anker/internal/config"
-	"github.com/charemma/anker/internal/ui"
+	"github.com/charemma/ikno/internal/ai"
+	"github.com/charemma/ikno/internal/config"
+	"github.com/charemma/ikno/internal/ui"
 	"github.com/spf13/cobra"
 )
 
 var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Edit configuration",
-	Long: `Open the anker configuration file in your editor.
+	Long: `Open the ikno configuration file in your editor.
 
 Creates the config file with commented defaults if it doesn't exist yet.
 Editor is resolved from $VISUAL, $EDITOR, or falls back to vi.`,

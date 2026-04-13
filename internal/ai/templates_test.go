@@ -3,7 +3,7 @@ package ai
 import (
 	"testing"
 
-	"github.com/charemma/anker/internal/sources"
+	"github.com/charemma/ikno/internal/sources"
 )
 
 func TestIsValidStyle(t *testing.T) {
