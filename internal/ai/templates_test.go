@@ -15,6 +15,7 @@ func TestIsValidStyle(t *testing.T) {
 		{"digest", true},
 		{"report", true},
 		{"retro", true},
+		{"stats", true},
 		{"status", true},
 		{"unknown", false},
 		{"", false},
@@ -29,10 +30,10 @@ func TestIsValidStyle(t *testing.T) {
 
 func TestValidStyleNames(t *testing.T) {
 	names := ValidStyleNames()
-	if len(names) != 5 {
-		t.Fatalf("expected 5 style names, got %d", len(names))
+	if len(names) != 6 {
+		t.Fatalf("expected 6 style names, got %d", len(names))
 	}
-	want := map[string]bool{"brief": true, "digest": true, "report": true, "retro": true, "status": true}
+	want := map[string]bool{"brief": true, "digest": true, "report": true, "retro": true, "stats": true, "status": true}
 	for _, name := range names {
 		if !want[name] {
 			t.Errorf("unexpected style name %q", name)

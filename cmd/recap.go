@@ -177,6 +177,8 @@ Examples:
 			AIModel:      cfg.AIModel,
 			AIAPIKey:     cfg.AIAPIKey,
 			EntryCount:   len(result.Entries),
+			Style:        string(style),
+			Language:     lang,
 		}, promptOverride, recapAPIKey)
 	},
 }
@@ -201,28 +203,39 @@ type parsedTemplate struct {
 // Frontmatter and the optional "## Prompt" heading are stripped from the body.
 // Files without frontmatter are returned as-is with an empty description.
 func parseTemplateFile(data []byte) parsedTemplate {
-	s := string(data)
+	lines := strings.Split(string(data), "\n")
 
 	var description, body string
 
-	if strings.HasPrefix(s, "---\n") {
-		end := strings.Index(s[4:], "\n---\n")
-		if end != -1 {
-			frontmatter := s[4 : end+4]
-			body = strings.TrimSpace(s[end+4+5:]) // skip past closing "\n---\n"
+	// Detect frontmatter: first non-empty line must be "---" (after trimming).
+	firstLine := ""
+	if len(lines) > 0 {
+		firstLine = strings.TrimSpace(lines[0])
+	}
 
-			for _, line := range strings.Split(frontmatter, "\n") {
+	if firstLine == "---" {
+		// Find closing "---" marker.
+		closeIdx := -1
+		for i := 1; i < len(lines); i++ {
+			if strings.TrimSpace(lines[i]) == "---" {
+				closeIdx = i
+				break
+			}
+		}
+		if closeIdx != -1 {
+			for _, line := range lines[1:closeIdx] {
 				line = strings.TrimSpace(line)
 				if strings.HasPrefix(line, "description:") {
 					description = strings.TrimSpace(strings.TrimPrefix(line, "description:"))
 					description = strings.Trim(description, `"'`)
 				}
 			}
+			body = strings.TrimSpace(strings.Join(lines[closeIdx+1:], "\n"))
 		} else {
-			body = s
+			body = strings.TrimSpace(strings.Join(lines, "\n"))
 		}
 	} else {
-		body = s
+		body = strings.TrimSpace(strings.Join(lines, "\n"))
 	}
 
 	// Strip optional "## Prompt" section heading.
@@ -319,7 +332,11 @@ func runListStyles(w *os.File, verbose bool) error {
 				for _, c := range customs {
 					pad := strings.Repeat(" ", customMax-len(c.name))
 					label := ui.StyleBold.Render(c.name) + pad
-					_, _ = fmt.Fprintf(w, "  %s   %s\n", label, c.tmpl.Description)
+					desc := c.tmpl.Description
+					if desc == "" {
+						desc = "(no description)"
+					}
+					_, _ = fmt.Fprintf(w, "  %s   %s\n", label, desc)
 					if verbose && c.tmpl.Body != "" {
 						_, _ = fmt.Fprintln(w)
 						for _, line := range strings.Split(c.tmpl.Body, "\n") {

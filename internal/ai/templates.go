@@ -13,6 +13,7 @@ const (
 	StyleDigest Style = "digest" // thematic overview, all sources, default
 	StyleReport Style = "report" // polished formal report, deliveries
 	StyleRetro  Style = "retro"  // retrospective: good/bad/learnings
+	StyleStats  Style = "stats"  // work statistics with category breakdown and ASCII bar charts
 	StyleStatus Style = "status" // progress/blocker/next, progress-focused
 )
 
@@ -22,6 +23,7 @@ var validStyles = []Style{
 	StyleDigest,
 	StyleReport,
 	StyleRetro,
+	StyleStats,
 	StyleStatus,
 }
 
@@ -38,6 +40,7 @@ var styleInfos = []StyleInfo{
 	{StyleStatus, "Progress/Blocker/Next, status-focused (12-18 lines)"},
 	{StyleReport, "Polished formal report, deliveries only (8-12 lines)"},
 	{StyleRetro, "Retrospective: good/bad/time/learnings (15-25 lines)"},
+	{StyleStats, "Work statistics with category breakdown and ASCII bar charts"},
 }
 
 // StyleInfoList returns all built-in styles with their descriptions.
@@ -95,6 +98,8 @@ func Prompt(style Style) string {
 		return promptReport
 	case StyleRetro:
 		return promptRetro
+	case StyleStats:
+		return promptStats
 	case StyleStatus:
 		return promptStatus
 	default:
@@ -271,3 +276,28 @@ Rules:
 - If there is nothing notable for a section, omit it entirely
 - Use concrete project/repository names from the input data (e.g. "anker", "nixos-config", "infra"). Never use generic terms like "das Werkzeug", "das Projekt", "das Tool". The reader may work on multiple projects and needs to know which is which.
 - Language: {language}`
+
+const promptStats = `Analyze the activity log and produce a work statistics report.
+Write in {language}.
+
+Required sections:
+
+1. Header: Date/period, total activity count.
+
+2. Category breakdown table: Group activities into 4-6 categories (e.g. coding, planning, documentation, meetings, debugging, organization). For each:
+   - Category name
+   - ASCII bar chart (use full block and light shade chars, 20 chars total width)
+   - Count and percentage
+   - 1-line description of what was done
+
+3. Work type distribution: Classify into 3 types (e.g. Thinking/Writing/Doing or Planning/Building/Organizing) with ASCII bars and percentages.
+
+4. One-line summary: A single sentence characterizing the day/week.
+
+Rules:
+- Categories must be derived from the actual data, not invented
+- Percentages must add up to 100%
+- Use concrete project names from the input
+- No preamble, start directly with the header
+- ASCII bars must be exactly 20 chars wide
+- No emojis`
