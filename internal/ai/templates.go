@@ -280,24 +280,35 @@ Rules:
 const promptStats = `Analyze the activity log and produce a work statistics report.
 Write in {language}.
 
-Required sections:
+Use this exact format (no tables, no pipe characters):
 
-1. Header: Date/period, total activity count.
+# Period -- N activities
 
-2. Category breakdown table: Group activities into 4-6 categories (e.g. coding, planning, documentation, meetings, debugging, organization). For each:
-   - Category name
-   - ASCII bar chart (use full block and light shade chars, 20 chars total width)
-   - Count and percentage
-   - 1-line description of what was done
+## Categories
 
-3. Work type distribution: Classify into 3 types (e.g. Thinking/Writing/Doing or Planning/Building/Organizing) with ASCII bars and percentages.
+Category Name        ████████████░░░░░░░░  42%  (N)
+  Short description of what was done
 
-4. One-line summary: A single sentence characterizing the day/week.
+Another Category     ██████░░░░░░░░░░░░░░  28%  (N)
+  Short description
+
+## Work Types
+
+Thinking             ████████████░░░░░░░░  55%
+Building             ████████░░░░░░░░░░░░  38%
+Organizing           █░░░░░░░░░░░░░░░░░░░   7%
+
+## Summary
+
+One sentence characterizing the day/week.
 
 Rules:
-- Categories must be derived from the actual data, not invented
-- Percentages must add up to 100%
-- Use concrete project names from the input
-- No preamble, start directly with the header
-- ASCII bars must be exactly 20 chars wide
-- No emojis`
+- 4-6 categories, derived from the data
+- Bars exactly 20 chars wide using block chars
+- Each line must fit in 72 chars -- no wrapping, no tables
+- Category name left, then bar, then percentage
+- Description indented 2 spaces on next line, max 50 chars
+- Percentages add up to 100%
+- Use concrete project names
+- No preamble, no markdown tables, no pipe chars, no emojis
+- Keep total output under 30 lines`
