@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/charemma/ikno/internal/sources"
@@ -181,8 +182,13 @@ func (c *ClaudeSource) GetEntries(from, to time.Time) ([]sources.Entry, error) {
 		return nil, fmt.Errorf("failed to read projects directory: %w", err)
 	}
 
-	var entries []sources.Entry
+	// Collect all files to parse, applying mtime pre-filter.
+	type fileJob struct {
+		path       string
+		projectDir string
+	}
 
+	var jobs []fileJob
 	for _, d := range dirEntries {
 		if !d.IsDir() {
 			continue
@@ -196,13 +202,41 @@ func (c *ClaudeSource) GetEntries(from, to time.Time) ([]sources.Entry, error) {
 		}
 
 		for _, path := range matches {
-			fileEntries, err := c.parseSessions(path, from, to, projectDir)
-			if err != nil {
-				_, _ = fmt.Fprintf(c.warn, "warning: %s: %v\n", filepath.Base(path), err)
+			// Skip files whose last modification is before the query start.
+			// A file can only contain entries up to its mtime, so if it was
+			// last modified before "from", none of its entries can match.
+			if info, err := os.Stat(path); err == nil && info.ModTime().Before(from) {
 				continue
 			}
-			entries = append(entries, fileEntries...)
+			jobs = append(jobs, fileJob{path: path, projectDir: projectDir})
 		}
+	}
+
+	// Parse files in parallel when there are multiple.
+	results := make([][]sources.Entry, len(jobs))
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	for i, job := range jobs {
+		wg.Add(1)
+		go func(idx int, j fileJob) {
+			defer wg.Done()
+			fileEntries, err := c.parseSessions(j.path, from, to, j.projectDir)
+			if err != nil {
+				mu.Lock()
+				_, _ = fmt.Fprintf(c.warn, "warning: %s: %v\n", filepath.Base(j.path), err)
+				mu.Unlock()
+				return
+			}
+			results[idx] = fileEntries
+		}(i, job)
+	}
+
+	wg.Wait()
+
+	var entries []sources.Entry
+	for _, r := range results {
+		entries = append(entries, r...)
 	}
 
 	return entries, nil

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"sync"
 
 	"github.com/charemma/ikno/internal/sources"
 	"github.com/charemma/ikno/internal/sources/git"
@@ -23,31 +24,57 @@ type BuildOptions struct {
 // range. When opts.EnrichDiffs is true, git sources are enriched with diffs.
 // Warnings about individual source failures are written to warn.
 func BuildRecap(sourceConfigs []sources.Config, tr *timerange.TimeRange, timespec string, opts BuildOptions, factory SourceFactory, warn io.Writer) (*RecapResult, error) {
-	var allEntries []sources.Entry
+	// Collect entries from all sources concurrently.
+	type sourceResult struct {
+		source  sources.Source
+		entries []sources.Entry
+	}
 
-	for _, cfg := range sourceConfigs {
-		source, err := factory(cfg)
-		if err != nil {
-			_, _ = fmt.Fprintf(warn, "Warning: %v at %s\n", err, cfg.Path)
-			continue
-		}
+	results := make([]sourceResult, len(sourceConfigs))
+	var wg sync.WaitGroup
+	var mu sync.Mutex
 
-		entries, err := source.GetEntries(tr.From, tr.To)
-		if err != nil {
-			_, _ = fmt.Fprintf(warn, "Warning: failed to get entries from %s %s: %v\n", cfg.Type, cfg.Path, err)
-			continue
-		}
+	for i, cfg := range sourceConfigs {
+		wg.Add(1)
+		go func(idx int, cfg sources.Config) {
+			defer wg.Done()
 
-		// Enrich git entries with diffs when requested
-		if opts.EnrichDiffs {
-			if gs, ok := source.(*git.GitSource); ok {
-				if err := gs.EnrichWithDiffs(entries); err != nil {
-					_, _ = fmt.Fprintf(warn, "Warning: failed to enrich diffs for %s: %v\n", gs.Location(), err)
+			source, err := factory(cfg)
+			if err != nil {
+				mu.Lock()
+				_, _ = fmt.Fprintf(warn, "Warning: %v at %s\n", err, cfg.Path)
+				mu.Unlock()
+				return
+			}
+
+			entries, err := source.GetEntries(tr.From, tr.To)
+			if err != nil {
+				mu.Lock()
+				_, _ = fmt.Fprintf(warn, "Warning: failed to get entries from %s %s: %v\n", cfg.Type, cfg.Path, err)
+				mu.Unlock()
+				return
+			}
+
+			// Enrich git entries with diffs when requested
+			if opts.EnrichDiffs {
+				if gs, ok := source.(*git.GitSource); ok {
+					if err := gs.EnrichWithDiffs(entries); err != nil {
+						mu.Lock()
+						_, _ = fmt.Fprintf(warn, "Warning: failed to enrich diffs for %s: %v\n", gs.Location(), err)
+						mu.Unlock()
+					}
 				}
 			}
-		}
 
-		allEntries = append(allEntries, entries...)
+			results[idx] = sourceResult{source: source, entries: entries}
+		}(i, cfg)
+	}
+
+	wg.Wait()
+
+	var allEntries []sources.Entry
+	for _, r := range results {
+		allEntries = append(allEntries, r.entries...)
 	}
 
 	// Sort entries by timestamp (newest first)
