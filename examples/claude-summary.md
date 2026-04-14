@@ -1,12 +1,12 @@
 # Generating work summaries with AI
 
-ikno uses AI by default to generate recap summaries. Just run `ikno recap today` and get a formatted summary.
+ikno uses AI by default to generate recap summaries. Just run `ikno recap thisweek` and get a formatted summary.
 
 ## Built-in styles
 
 ```bash
-ikno recap today                        # default style (digest)
-ikno recap today --style brief          # quick 3-5 bullets
+ikno recap thisweek                      # default style (digest)
+ikno recap thisweek --style brief        # quick 3-5 bullets
 ikno recap thisweek --style status      # standup format
 ikno recap thisweek --style report      # professional report
 ikno recap yesterday --style retro      # retrospective
@@ -16,8 +16,8 @@ ikno recap thisweek --style stats       # work statistics
 Control the language with `--lang`:
 
 ```bash
-ikno recap today --lang english
-ikno recap today --lang deutsch
+ikno recap thisweek --lang english
+ikno recap thisweek --lang deutsch
 ```
 
 Set defaults in config:
@@ -67,8 +67,8 @@ API key resolution: `--api-key` flag > `AI_API_KEY` env var > config file.
 You can also bypass the built-in AI and pipe raw output:
 
 ```bash
-ikno recap today --raw | claude -p 'Summarize my workday.'
-ikno recap today --raw | llm 'Summarize my workday.'
+ikno recap thisweek --raw | claude -p 'Summarize my workday.'
+ikno recap thisweek --raw | llm 'Summarize my workday.'
 ```
 
 ## Custom prompts
@@ -143,7 +143,7 @@ cp examples/claude-rules/ikno-context.md .claude/rules/
 
 ```bash
 ikno-summary() {
-  ikno recap "${1:-today}"
+  ikno recap "${1:-thisweek}"
 }
 ```
 

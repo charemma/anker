@@ -84,7 +84,7 @@ ikno recap "dezember 2025"  # German month names supported
 
 **AI summary (default):**
 ```bash
-ikno recap today
+ikno recap thisweek
 ikno recap thisweek --style brief
 ikno recap yesterday --style status --lang english
 ```
@@ -93,14 +93,14 @@ AI-generated summary using your configured backend. Styles: brief, digest (defau
 
 **Raw activity log:**
 ```bash
-ikno recap today --raw
+ikno recap thisweek --raw
 ```
 
 Plain text list of all activities with timestamps.
 
 **JSON:**
 ```bash
-ikno recap today --json
+ikno recap thisweek --json
 ```
 
 Structured data for further processing.
@@ -163,11 +163,11 @@ Custom prompt templates as `.md` files are also supported.
 
 ```bash
 # Pipe raw output to any LLM CLI
-ikno recap today --raw | claude -p "Create standup notes"
+ikno recap thisweek --raw | claude -p "Create standup notes"
 ikno recap thisweek --raw | llm "Write a weekly report"
 
 # Render with glow
-ikno recap today | glow -
+ikno recap thisweek | glow -
 
 # Save to file
 ikno recap "December 2025" > monthly-report.md
@@ -192,7 +192,7 @@ ai_prompt: |
 **Custom config directory:**
 ```bash
 export IKNO_HOME=/path/to/custom/config
-ikno recap today  # uses /path/to/custom/config instead of ~/.config/ikno
+ikno recap thisweek  # uses /path/to/custom/config instead of ~/.config/ikno
 ```
 
 ### Configuration

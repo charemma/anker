@@ -21,7 +21,7 @@ Set `IKNO_HOME` to use a different directory:
 
 ```bash
 export IKNO_HOME=/path/to/custom/config
-ikno recap today  # uses /path/to/custom/config instead of ~/.ikno
+ikno recap thisweek  # uses /path/to/custom/config instead of ~/.ikno
 ```
 
 Add to your shell profile to make it permanent:

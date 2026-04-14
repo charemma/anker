@@ -21,7 +21,7 @@ Enter the dev shell (provides go, gopls, golangci-lint):
 Build and run:
 - `nix build` -- reproducible build to `./result/bin/anker`
 - `go build -o bin/anker .` -- quick build during development
-- `go run . recap today` -- quick run without building
+- `go run . recap thisweek` -- quick run without building
 
 Testing and checks:
 - `nix flake check` -- all checks (tests + lint + build + pre-commit)

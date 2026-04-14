@@ -62,8 +62,8 @@ Output modes:
 
 Examples:
   ikno recap
-  ikno recap today
   ikno recap thisweek
+  ikno recap today
   ikno recap thisweek --style digest
   ikno recap --style brief
   ikno recap lastweek --raw | grep feat

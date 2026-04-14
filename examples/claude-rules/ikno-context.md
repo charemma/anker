@@ -5,7 +5,7 @@ ikno is a CLI tool for reconstructing your workday after the fact. It collects a
 ### How ikno works
 
 - Sources are explicitly registered: `ikno source add git ~/code/project`
-- `ikno recap today` collects entries from all sources and generates an AI summary
+- `ikno recap thisweek` collects entries from all sources and generates an AI summary
 - Output modes: AI summary (default), `--raw` for plain text, `--json` for structured data
 - `--style` selects the AI prompt style (brief, digest, status, report, retro, stats)
 - `--lang` controls the output language

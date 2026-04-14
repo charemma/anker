@@ -55,7 +55,7 @@ nix build
 go build -o bin/ikno .
 
 # Quick run without building
-go run . recap today
+go run . recap thisweek
 ```
 
 ## Testing
