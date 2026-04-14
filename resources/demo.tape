@@ -92,7 +92,7 @@ Type "# ikno - a fixpoint for your work"
 Sleep 2s
 Enter
 Enter
-Type "# Install: curl -sSL https://charemma.de/ikno/install.sh | sh"
+Type "# Install: curl -fsSL https://ikno.charemma.de/install.sh | sh"
 Sleep 2s
 Enter
 Enter

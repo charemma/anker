@@ -2,7 +2,7 @@
 set -e
 
 # ikno installer script
-# Usage: curl -sSL https://charemma.de/ikno/install.sh | sh
+# Usage: curl -fsSL https://ikno.charemma.de/install.sh | sh
 
 VERSION="${IKNO_VERSION:-latest}"
 INSTALL_DIR="${IKNO_INSTALL_DIR:-/usr/local/bin}"

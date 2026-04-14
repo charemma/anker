@@ -4,6 +4,8 @@
 
 From git, notes, and AI sessions -- in one command.
 
+**Website:** [ikno.charemma.de](https://ikno.charemma.de)
+
 ---
 
 ```
@@ -82,7 +84,7 @@ $ ikno recap thisweek --style retro
 
 **Quick install** (installs to `~/.local/bin`):
 ```bash
-curl -sSL https://charemma.de/ikno/install.sh | sh
+curl -fsSL https://ikno.charemma.de/install.sh | sh
 ```
 
 **Nix:**
