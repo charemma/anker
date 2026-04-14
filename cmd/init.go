@@ -58,7 +58,7 @@ var initCmd = &cobra.Command{
 Walks through each source type and offers to add what it finds:
   Git repositories in ~/code (or a path you specify)
   Claude Code session history in ~/.claude
-  Obsidian vault at common locations
+  Obsidian vaults (scans ~ for .obsidian directories)
   Markdown directories (opt-in only)
 
 Examples:
@@ -382,27 +382,21 @@ func initStepObsidian(store *storage.Store, registered []sources.Config) (int, e
 		return 0, nil
 	}
 
-	candidates := []string{
-		filepath.Join(home, "Documents", "Notes"),
-		filepath.Join(home, "Obsidian"),
-		filepath.Join(home, "obsidian"),
-	}
-	if env := os.Getenv("OBSIDIAN_VAULT"); env != "" {
-		candidates = append([]string{env}, candidates...)
-	}
-
-	seen := make(map[string]bool)
 	var detected []string
-	for _, c := range candidates {
-		abs, absErr := filepath.Abs(c)
-		if absErr != nil || seen[abs] {
-			continue
-		}
-		seen[abs] = true
-		if initDirExists(filepath.Join(abs, ".obsidian")) {
+
+	// OBSIDIAN_VAULT env var takes priority -- add it first if valid.
+	if env := os.Getenv("OBSIDIAN_VAULT"); env != "" {
+		abs, absErr := filepath.Abs(env)
+		if absErr == nil && initDirExists(filepath.Join(abs, ".obsidian")) {
 			detected = append(detected, abs)
 		}
 	}
+
+	// Scan $HOME for .obsidian directories.
+	_, _ = fmt.Fprintln(os.Stdout, styleMuted.Render("Scanning for Obsidian vaults..."))
+	scanned := initScanObsidianVaults(home, 3)
+	detected = append(detected, scanned...)
+	detected = initDedup(detected)
 
 	if initYes {
 		added := 0
@@ -472,7 +466,7 @@ func initStepObsidian(store *storage.Store, registered []sources.Config) (int, e
 	}
 
 	if len(detected) == 0 {
-		fmt.Println("No Obsidian vaults found at common locations.")
+		fmt.Println("No Obsidian vaults found.")
 		fmt.Println()
 		n, addErr := initObsidianPromptManual(store, registered, home, "Enter path to a vault (or press Enter to skip)")
 		added += n
@@ -801,6 +795,79 @@ func initShortenHome(path, home string) string {
 		return "~" + path[len(home):]
 	}
 	return path
+}
+
+// initScanObsidianVaults walks home up to maxDepth levels looking for directories
+// that contain a .obsidian/ subdirectory. It skips hidden directories and known
+// heavy directories for performance.
+func initScanObsidianVaults(home string, maxDepth int) []string {
+	skipDirs := map[string]bool{
+		"node_modules": true, "Library": true, ".Trash": true,
+		".cache": true, ".local": true, ".npm": true, ".cargo": true,
+		"go": true, ".git": true, ".nix-defexpr": true, ".nix-profile": true,
+	}
+
+	var vaults []string
+	homeDepth := strings.Count(filepath.Clean(home), string(filepath.Separator))
+
+	_ = filepath.WalkDir(home, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return filepath.SkipDir
+		}
+		if !d.IsDir() {
+			return nil
+		}
+
+		name := d.Name()
+		depth := strings.Count(filepath.Clean(path), string(filepath.Separator)) - homeDepth
+
+		// Enforce max depth.
+		if depth > maxDepth {
+			return filepath.SkipDir
+		}
+
+		// Skip hidden directories (except the root itself).
+		if depth > 0 && strings.HasPrefix(name, ".") {
+			return filepath.SkipDir
+		}
+
+		// Skip known heavy directories.
+		if skipDirs[name] {
+			return filepath.SkipDir
+		}
+
+		// Check if this directory is an Obsidian vault.
+		if initDirExists(filepath.Join(path, ".obsidian")) {
+			abs, absErr := filepath.Abs(path)
+			if absErr == nil {
+				vaults = append(vaults, abs)
+			}
+			return filepath.SkipDir
+		}
+
+		return nil
+	})
+
+	return vaults
+}
+
+// initDedup deduplicates vault paths using filepath.EvalSymlinks to handle
+// case-insensitive filesystems (macOS) and symlinks.
+func initDedup(paths []string) []string {
+	seen := make(map[string]bool)
+	var result []string
+	for _, p := range paths {
+		key := p
+		if resolved, err := filepath.EvalSymlinks(p); err == nil {
+			key = resolved
+		}
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		result = append(result, p)
+	}
+	return result
 }
 
 func init() {
