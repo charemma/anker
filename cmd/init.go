@@ -333,10 +333,10 @@ func initStepGit(store *storage.Store, registered []sources.Config, scannedRepos
 
 	options := make([]huh.Option[string], len(newRepos))
 	for i, r := range newRepos {
-		options[i] = huh.NewOption(initShortenHome(r, home), r).Selected(true)
+		options[i] = huh.NewOption(initShortenHome(r, home), r)
 	}
 
-	title := fmt.Sprintf("Select repositories to add (%d found", len(newRepos))
+	title := fmt.Sprintf("Select repositories to add with Space (%d found", len(newRepos))
 	if alreadyReg > 0 {
 		title += fmt.Sprintf(", %d already registered", alreadyReg)
 	}
