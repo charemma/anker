@@ -64,13 +64,13 @@ func Transform(ctx context.Context, w io.Writer, renderedText string, period str
 	// Inject time range context
 	prompt = fmt.Sprintf("Period: %s\n\n%s", period, prompt)
 
-	// Status line goes to stderr -- invisible when piped
-	statusLine := "Generating summary..."
+	// Spinner on stderr -- invisible when piped, clears when done
+	spinnerMsg := "Generating summary..."
 	if cfg.Style != "" || cfg.Language != "" {
 		details := fmt.Sprintf("style: %s, lang: %s", cfg.Style, cfg.Language)
-		statusLine = "Generating summary... " + ui.StyleMuted.Render("("+details+")")
+		spinnerMsg = "Generating summary... " + ui.StyleMuted.Render("("+details+")")
 	}
-	_, _ = fmt.Fprintln(os.Stderr, "\n"+statusLine)
+	stopSpinner := ui.StartSpinner(spinnerMsg)
 
 	// Buffer AI output so we can glamour-render it
 	var aiOut bytes.Buffer
@@ -95,6 +95,8 @@ func Transform(ctx context.Context, w io.Writer, renderedText string, period str
 		}
 		err = client.StreamCompletion(ctx, prompt, renderedText, &aiOut)
 	}
+
+	stopSpinner()
 
 	if err != nil {
 		return err
