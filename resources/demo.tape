@@ -20,7 +20,7 @@ Type "# ikno - reconstruct your workday"
 Sleep 2s
 Enter
 Enter
-Type "# Work first, summarize later. #AntiProductivity"
+Type "# Work first, summarize later. Thinking, not metrics."
 Enter
 Sleep 3s
 

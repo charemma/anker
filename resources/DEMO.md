@@ -24,7 +24,7 @@ just update
 
 A live terminal recording showing:
 
-1. **Intro** - What is ikno? #AntiProductivity
+1. **Intro** - What is ikno? Thinking, not metrics
 2. **Add sources** - Git repo + markdown notes
 3. **List sources** - See configured sources
 4. **Simple recap** - Quick daily summary (with glow)

@@ -1,26 +1,28 @@
-# The AntiProductivity Mindset
+# Thinking, Not Metrics
 
-## What *AntiProductivity* Means
+## What This Means
 
-The term *AntiProductivity* is not against doing good work — quite the opposite.
+Most tools in 2026 don't just colonize your time -- they colonize your thinking.
+They frame your work as data points: hours logged, tasks closed, streaks maintained.
+ikno takes a different stance.
 
 It's about shifting the focus away from:
 - minute-by-minute tracking
 - time quotas
 - artificial optimization pressure
-- productivity metrics that don't reflect real value
+- metrics that don't reflect real value
 
 And moving towards:
 - understanding what you actually *accomplished*
 - reflecting on the *meaning* of your work
 - embracing *context* instead of raw output
 
-## Why Traditional Productivity Metrics Fall Short
+## Why Metrics Miss the Point
 
 Many traditional tools assume:
-- that more tracked time means more productivity
+- that more tracked time means more output
 - that optimization accelerates value creation
-- that metrics correlate with outcomes
+- that numbers correlate with outcomes
 
 But reality is more complex. Human work is rarely linear, especially in software:
 - deep thinking can span hours with limited physical activity
@@ -34,7 +36,7 @@ ikno is designed to:
 2. Provide a *narrative recap* in natural text
 3. Encourage reflection instead of performance anxiety
 
-This is the essence of the **#AntiProductivity mindset**.
+The point is thinking about what you did -- not measuring it.
 
 ## Why it Matters
 
@@ -46,4 +48,4 @@ For individuals:
 For teams:
 - generate readable standup text
 - improve asynchronous communication
-- reduce noise from meaningless metrics
+- replace noise from meaningless metrics with actual narrative

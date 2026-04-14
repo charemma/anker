@@ -17,7 +17,7 @@ var rootCmd = &cobra.Command{
 	Use:   "ikno",
 	Short: "ikno - a fixpoint for your work",
 	Long: `ikno is a local, text-first CLI tool that helps you remember what you actually did
-without time tracking, productivity metrics, or background agents.`,
+without time tracking or background agents. Think about what you did, not how to measure it.`,
 	Version: Version,
 }
 

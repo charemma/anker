@@ -7,9 +7,9 @@ From git, notes, and AI sessions -- in one command.
 ---
 
 ```
-$ ikno recap today --style stats
+$ ikno recap thisweek --style stats
 
-# 2026-04-13 -- 73 activities
+# 2026-04-07 to 2026-04-13 -- 73 activities
 
 ## Categories
 
@@ -132,12 +132,12 @@ ikno source list
 ikno ships with 6 built-in report styles. Pick the one that fits your audience:
 
 ```bash
-ikno recap today --style brief       # Done / Next / Blockers (5-10 lines)
+ikno recap thisweek --style brief     # Done / Next / Blockers (5-10 lines)
 ikno recap thisweek                  # digest -- full overview (default)
 ikno recap thisweek --style status   # Progress / Blockers / Next
 ikno recap thisweek --style report   # Polished prose, deliveries first
 ikno recap thisweek --style retro    # What went well / badly / learnings
-ikno recap today --style stats       # Category breakdown with ASCII charts
+ikno recap thisweek --style stats     # Category breakdown with ASCII charts
 ```
 
 See what each style does: `ikno recap --styles`
@@ -239,7 +239,7 @@ ai_language: en
 
 ## Philosophy
 
-Most productivity tools ask you to track everything up front -- every minute, every switch, every task. ikno does not.
+Most tools ask you to track everything up front -- every minute, every switch, every task. They turn your work into metrics. ikno does not.
 
 You work normally. At the end of the day (or week), you run one command and get a readable account of what actually happened. No timers, no categories, no logging discipline required.
 

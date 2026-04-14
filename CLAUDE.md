@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Deferred analysis: work first, summarize later
 - CLI arguments override configuration
 - Simple and predictable -- prefer straightforward solutions over clever abstractions
-- Not a time tracker, not a productivity optimizer, not a daemon
+- Not a time tracker, not a metrics dashboard, not a daemon
 
 ## Development commands
 
