@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/charemma/ikno/internal/config"
 	"github.com/charemma/ikno/internal/git"
@@ -48,22 +49,33 @@ func (c initCounts) summary() string {
 	return strings.Join(parts, ", ")
 }
 
-var initYes bool
+// scanResults holds the results of the unified home directory scan.
+type scanResults struct {
+	gitRepos       []string
+	obsidianVaults []string
+}
+
+var (
+	initYes       bool
+	initScanDepth int
+)
 
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Interactive setup wizard",
 	Long: `Set up ikno sources step by step.
 
-Walks through each source type and offers to add what it finds:
-  Git repositories in ~/code (or a path you specify)
+Scans your home directory for git repositories and Obsidian vaults,
+then walks through each source type and offers to add what it finds:
+  Git repositories (discovered via .git directories)
   Claude Code session history in ~/.claude
-  Obsidian vaults (scans ~ for .obsidian directories)
+  Obsidian vaults (discovered via .obsidian directories)
   Markdown directories (opt-in only)
 
 Examples:
   ikno init
-  ikno init --yes`,
+  ikno init --yes
+  ikno init --scan-depth 3`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if !isTTY() && !initYes {
@@ -85,16 +97,30 @@ Examples:
 			cfg = config.DefaultConfig()
 		}
 
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("failed to determine home directory: %w", err)
+		}
+
 		if !initYes {
 			fmt.Println(styleBold.Render("Welcome to ikno. Let's find your sources."))
 			fmt.Println("This wizard adds the data sources ikno reads for your recap.")
 			fmt.Println()
 		}
 
+		// Unified scan of $HOME for .git and .obsidian directories.
+		showProgress := isTTY() && !initYes
+		scan := initScanHome(home, initScanDepth, showProgress)
+
+		_, _ = fmt.Fprintf(os.Stdout, "Found %d git %s and %d Obsidian %s.\n",
+			len(scan.gitRepos), initPlural(len(scan.gitRepos), "repo", "repos"),
+			len(scan.obsidianVaults), initPlural(len(scan.obsidianVaults), "vault", "vaults"))
+		fmt.Println()
+
 		var counts initCounts
 		var runErr error
 
-		counts.git, runErr = initStepGit(store, registered)
+		counts.git, runErr = initStepGit(store, registered, scan.gitRepos, home)
 		if runErr != nil {
 			return runErr
 		}
@@ -104,7 +130,7 @@ Examples:
 			return runErr
 		}
 
-		counts.obsidian, runErr = initStepObsidian(store, registered)
+		counts.obsidian, runErr = initStepObsidian(store, registered, scan.obsidianVaults, home)
 		if runErr != nil {
 			return runErr
 		}
@@ -147,123 +173,177 @@ Examples:
 	},
 }
 
-func initStepGit(store *storage.Store, registered []sources.Config) (int, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return 0, nil
+// initScanHome walks home up to maxDepth levels and collects paths containing
+// .git or .obsidian directories. The walk runs in a goroutine and sends results
+// through a channel. When showProgress is true, a live counter is displayed on
+// stderr that updates as results come in.
+func initScanHome(home string, maxDepth int, showProgress bool) scanResults {
+	skipDirs := map[string]bool{
+		"node_modules": true, "Library": true, ".Trash": true,
+		".cache": true, ".local": true, ".npm": true, ".cargo": true,
+		".nix-defexpr": true, ".nix-profile": true,
+		"vendor": true, "dist": true, "build": true,
 	}
-	defaultCodeDir := filepath.Join(home, "code")
 
+	type result struct {
+		path     string
+		category string // "git" or "obsidian"
+	}
+
+	ch := make(chan result, 64)
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		homeDepth := strings.Count(filepath.Clean(home), string(filepath.Separator))
+
+		_ = filepath.WalkDir(home, func(path string, d os.DirEntry, err error) error {
+			if err != nil {
+				return filepath.SkipDir
+			}
+			if !d.IsDir() {
+				return nil
+			}
+
+			name := d.Name()
+			depth := strings.Count(filepath.Clean(path), string(filepath.Separator)) - homeDepth
+
+			// Enforce max depth.
+			if depth > maxDepth {
+				return filepath.SkipDir
+			}
+
+			// Skip the home directory itself -- we only care about children.
+			if depth == 0 {
+				return nil
+			}
+
+			// Skip hidden directories. These are generally noise (.cache,
+			// .local, etc.) and skipping them is a big performance win.
+			if strings.HasPrefix(name, ".") {
+				return filepath.SkipDir
+			}
+
+			// Skip known heavy directories.
+			if skipDirs[name] {
+				return filepath.SkipDir
+			}
+
+			// Check for .git directory (don't recurse into the repo).
+			hasGit := initDirExists(filepath.Join(path, ".git"))
+			hasObsidian := initDirExists(filepath.Join(path, ".obsidian"))
+
+			if hasGit {
+				abs, absErr := filepath.Abs(path)
+				if absErr == nil {
+					ch <- result{path: abs, category: "git"}
+				}
+				// Don't recurse into git repos -- they won't contain
+				// independent .obsidian vaults at a useful level.
+				return filepath.SkipDir
+			}
+
+			if hasObsidian {
+				abs, absErr := filepath.Abs(path)
+				if absErr == nil {
+					ch <- result{path: abs, category: "obsidian"}
+				}
+				// Obsidian vaults don't nest, skip subtree.
+				return filepath.SkipDir
+			}
+
+			return nil
+		})
+	}()
+
+	// Close channel when walker is done.
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
+
+	// Collect results from the channel and optionally show live progress.
+	var gitRepos, obsidianVaults []string
+	for r := range ch {
+		switch r.category {
+		case "git":
+			gitRepos = append(gitRepos, r.path)
+		case "obsidian":
+			obsidianVaults = append(obsidianVaults, r.path)
+		}
+		if showProgress {
+			_, _ = fmt.Fprintf(os.Stderr, "\rScanning... found %d git %s, %d %s",
+				len(gitRepos), initPlural(len(gitRepos), "repo", "repos"),
+				len(obsidianVaults), initPlural(len(obsidianVaults), "vault", "vaults"))
+		}
+	}
+
+	// Clear the progress line.
+	if showProgress {
+		_, _ = fmt.Fprintf(os.Stderr, "\r%80s\r", "")
+	}
+
+	// Add OBSIDIAN_VAULT env var if set and valid.
+	if env := os.Getenv("OBSIDIAN_VAULT"); env != "" {
+		abs, absErr := filepath.Abs(env)
+		if absErr == nil && initDirExists(filepath.Join(abs, ".obsidian")) {
+			obsidianVaults = append(obsidianVaults, abs)
+		}
+	}
+
+	return scanResults{
+		gitRepos:       initDedup(gitRepos),
+		obsidianVaults: initDedup(obsidianVaults),
+	}
+}
+
+func initStepGit(store *storage.Store, registered []sources.Config, scannedRepos []string, home string) (int, error) {
 	if initYes {
-		return initStepGitAuto(store, registered, defaultCodeDir, home)
+		return initStepGitAuto(store, registered, scannedRepos, home)
 	}
 
-	// Pre-check default path: if all repos there are already registered, show
-	// a compact status line and skip the interactive section entirely.
-	if initDirExists(defaultCodeDir) {
-		allFound, _ := sources.DiscoverSources(defaultCodeDir, 2, nil)
-		alreadyReg := 0
-		newCount := 0
-		for _, d := range allFound {
-			if d.Type != "git" || initIsHomeDir(d.Path) {
-				continue
-			}
-			if initIsRegistered(registered, "git", d.Path) {
-				alreadyReg++
-			} else {
-				newCount++
-			}
-		}
-		if newCount == 0 && alreadyReg > 0 {
-			initCheckLine("Git repositories",
-				fmt.Sprintf("%d %s in %s (already configured)",
-					alreadyReg,
-					initPlural(alreadyReg, "repo", "repos"),
-					initShortenHome(defaultCodeDir, home),
-				),
-			)
-			return 0, nil
-		}
-	}
-
-	// Interactive section
-	initSectionHeader("Git repositories")
-
-	codeDir := initShortenHome(defaultCodeDir, home)
-	if err := huh.NewInput().
-		Title("Where do you keep your code?").
-		Value(&codeDir).
-		Run(); initIsAbort(err) {
-		return 0, nil
-	} else if err != nil {
-		return 0, err
-	}
-	if codeDir == "" {
-		codeDir = initShortenHome(defaultCodeDir, home)
-	}
-	codeDir = initExpandHome(codeDir, home)
-
-	if _, statErr := os.Stat(codeDir); statErr != nil {
-		fmt.Println()
-		fmt.Printf("Directory not found: %s\n", codeDir)
-		fmt.Println(styleMuted.Render("Add a repository manually: ikno source add git ~/path/to/repo"))
-		fmt.Println()
-		return 0, nil
-	}
-
-	fmt.Println()
-	fmt.Printf("Scanning %s ...\n", initShortenHome(codeDir, home))
-
-	allDiscovered, discErr := sources.DiscoverSources(codeDir, 2, nil)
-	if discErr != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "warning: could not scan %s: %v\n", codeDir, discErr)
-		return 0, nil
-	}
-
-	var gitRepos []sources.DetectedSource
+	// Separate new repos from already-registered ones.
+	var newRepos []string
 	alreadyReg := 0
-	for _, d := range allDiscovered {
-		if d.Type != "git" || initIsHomeDir(d.Path) {
+	for _, path := range scannedRepos {
+		if initIsHomeDir(path) {
 			continue
 		}
-		if initIsRegistered(registered, "git", d.Path) {
+		if initIsRegistered(registered, "git", path) {
 			alreadyReg++
 		} else {
-			gitRepos = append(gitRepos, d)
+			newRepos = append(newRepos, path)
 		}
 	}
 
-	total := len(gitRepos)
-	displayDir := initShortenHome(codeDir, home)
-
-	if total == 0 {
+	if len(newRepos) == 0 {
 		if alreadyReg > 0 {
-			fmt.Println(styleMuted.Render(
-				fmt.Sprintf("All %d %s in %s already registered.",
-					alreadyReg, initPlural(alreadyReg, "repo", "repos"), displayDir)))
+			initCheckLine("Git repositories",
+				fmt.Sprintf("%d %s (already configured)",
+					alreadyReg, initPlural(alreadyReg, "repo", "repos")))
 		} else {
-			fmt.Printf("No git repositories found in %s.\n", displayDir)
-			fmt.Println(styleMuted.Render("Add a repository manually: ikno source add git ~/path/to/repo"))
+			initCheckLine("Git repositories", "none found")
 		}
-		fmt.Println()
 		return 0, nil
 	}
 
-	fmt.Println()
+	// Interactive section -- show multi-select with scan results.
+	initSectionHeader("Git repositories")
 
-	options := make([]huh.Option[string], total)
-	for i, r := range gitRepos {
-		options[i] = huh.NewOption(initShortenHome(r.Path, home), r.Path).Selected(true)
+	options := make([]huh.Option[string], len(newRepos))
+	for i, r := range newRepos {
+		options[i] = huh.NewOption(initShortenHome(r, home), r).Selected(true)
 	}
 
-	title := fmt.Sprintf("Select repositories to add (%d found", total)
+	title := fmt.Sprintf("Select repositories to add (%d found", len(newRepos))
 	if alreadyReg > 0 {
 		title += fmt.Sprintf(", %d already registered", alreadyReg)
 	}
 	title += ")"
 
 	var selected []string
-	height := min(total+3, 16)
+	height := min(len(newRepos)+3, 16)
 	if err := huh.NewMultiSelect[string]().
 		Title(title).
 		Options(options...).
@@ -286,34 +366,25 @@ func initStepGit(store *storage.Store, registered []sources.Config) (int, error)
 	}
 	if added > 0 {
 		fmt.Println(styleSuccess.Render(
-			fmt.Sprintf("✓ Added %d git %s", added, initPlural(added, "repository", "repositories"))))
+			fmt.Sprintf("Added %d git %s", added, initPlural(added, "repository", "repositories"))))
 		fmt.Println()
 	}
 	return added, nil
 }
 
 // initStepGitAuto handles git discovery for --yes mode without any prompts.
-func initStepGitAuto(store *storage.Store, registered []sources.Config, codeDir, home string) (int, error) {
-	if _, err := os.Stat(codeDir); err != nil {
-		_, _ = fmt.Fprintf(os.Stdout, "Scanning %s ... directory not found.\n", initShortenHome(codeDir, home))
-		return 0, nil
-	}
-	allDiscovered, err := sources.DiscoverSources(codeDir, 2, nil)
-	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "warning: could not scan %s: %v\n", codeDir, err)
-		return 0, nil
-	}
-	var gitRepos []sources.DetectedSource
-	for _, d := range allDiscovered {
-		if d.Type == "git" && !initIsHomeDir(d.Path) && !initIsRegistered(registered, "git", d.Path) {
-			gitRepos = append(gitRepos, d)
+func initStepGitAuto(store *storage.Store, registered []sources.Config, scannedRepos []string, home string) (int, error) {
+	var newRepos []string
+	for _, path := range scannedRepos {
+		if !initIsHomeDir(path) && !initIsRegistered(registered, "git", path) {
+			newRepos = append(newRepos, path)
 		}
 	}
-	_, _ = fmt.Fprintf(os.Stdout, "Found %d new git %s in %s.\n",
-		len(gitRepos), initPlural(len(gitRepos), "repository", "repositories"), initShortenHome(codeDir, home))
+	_, _ = fmt.Fprintf(os.Stdout, "Found %d new git %s.\n",
+		len(newRepos), initPlural(len(newRepos), "repository", "repositories"))
 	added := 0
-	for _, r := range gitRepos {
-		if err := initAddGitSource(store, r.Path); err != nil {
+	for _, path := range newRepos {
+		if err := initAddGitSource(store, path); err != nil {
 			return added, err
 		}
 		added++
@@ -371,36 +442,15 @@ func initStepClaude(store *storage.Store, registered []sources.Config) (int, err
 	if err := initAddSource(store, "claude", claudePath); err != nil {
 		return 0, err
 	}
-	fmt.Println(styleSuccess.Render("✓ Added Claude sessions"))
+	fmt.Println(styleSuccess.Render("Added Claude sessions"))
 	fmt.Println()
 	return 1, nil
 }
 
-func initStepObsidian(store *storage.Store, registered []sources.Config) (int, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return 0, nil
-	}
-
-	var detected []string
-
-	// OBSIDIAN_VAULT env var takes priority -- add it first if valid.
-	if env := os.Getenv("OBSIDIAN_VAULT"); env != "" {
-		abs, absErr := filepath.Abs(env)
-		if absErr == nil && initDirExists(filepath.Join(abs, ".obsidian")) {
-			detected = append(detected, abs)
-		}
-	}
-
-	// Scan $HOME for .obsidian directories.
-	_, _ = fmt.Fprintln(os.Stdout, styleMuted.Render("Scanning for Obsidian vaults..."))
-	scanned := initScanObsidianVaults(home, 3)
-	detected = append(detected, scanned...)
-	detected = initDedup(detected)
-
+func initStepObsidian(store *storage.Store, registered []sources.Config, scannedVaults []string, home string) (int, error) {
 	if initYes {
 		added := 0
-		for _, v := range detected {
+		for _, v := range scannedVaults {
 			if initIsRegistered(registered, "obsidian", v) {
 				continue
 			}
@@ -414,19 +464,19 @@ func initStepObsidian(store *storage.Store, registered []sources.Config) (int, e
 	}
 
 	// Check if all detected vaults are already registered.
-	if len(detected) > 0 {
+	if len(scannedVaults) > 0 {
 		newCount := 0
-		for _, v := range detected {
+		for _, v := range scannedVaults {
 			if !initIsRegistered(registered, "obsidian", v) {
 				newCount++
 			}
 		}
 		if newCount == 0 {
-			if len(detected) == 1 {
-				initCheckLine("Obsidian vault", initShortenHome(detected[0], home)+" (already configured)")
+			if len(scannedVaults) == 1 {
+				initCheckLine("Obsidian vault", initShortenHome(scannedVaults[0], home)+" (already configured)")
 			} else {
 				initCheckLine("Obsidian vault",
-					fmt.Sprintf("%d vaults (already configured)", len(detected)))
+					fmt.Sprintf("%d vaults (already configured)", len(scannedVaults)))
 			}
 			return 0, nil
 		}
@@ -437,7 +487,7 @@ func initStepObsidian(store *storage.Store, registered []sources.Config) (int, e
 
 	added := 0
 
-	for _, v := range detected {
+	for _, v := range scannedVaults {
 		if initIsRegistered(registered, "obsidian", v) {
 			fmt.Println(styleMuted.Render(
 				fmt.Sprintf("  %s already registered, skipping.", initShortenHome(v, home))))
@@ -459,13 +509,13 @@ func initStepObsidian(store *storage.Store, registered []sources.Config) (int, e
 			if err := initAddSource(store, "obsidian", v); err != nil {
 				return added, err
 			}
-			fmt.Println(styleSuccess.Render("✓ Added Obsidian vault: " + initShortenHome(v, home)))
+			fmt.Println(styleSuccess.Render("Added Obsidian vault: " + initShortenHome(v, home)))
 			fmt.Println()
 			added++
 		}
 	}
 
-	if len(detected) == 0 {
+	if len(scannedVaults) == 0 {
 		fmt.Println("No Obsidian vaults found.")
 		fmt.Println()
 		n, addErr := initObsidianPromptManual(store, registered, home, "Enter path to a vault (or press Enter to skip)")
@@ -475,7 +525,7 @@ func initStepObsidian(store *storage.Store, registered []sources.Config) (int, e
 		}
 	}
 
-	if len(detected) > 0 || added > 0 {
+	if len(scannedVaults) > 0 || added > 0 {
 		for {
 			var addAnother bool
 			if err := huh.NewConfirm().
@@ -541,7 +591,7 @@ func initObsidianPromptManual(store *storage.Store, registered []sources.Config,
 	if err := initAddSource(store, "obsidian", vaultPath); err != nil {
 		return 0, err
 	}
-	fmt.Println(styleSuccess.Render("✓ Added Obsidian vault: " + initShortenHome(vaultPath, home)))
+	fmt.Println(styleSuccess.Render("Added Obsidian vault: " + initShortenHome(vaultPath, home)))
 	fmt.Println()
 	return 1, nil
 }
@@ -629,7 +679,7 @@ func initStepMarkdown(store *storage.Store, registered []sources.Config) (int, e
 	if err := initAddSource(store, "markdown", mdPath); err != nil {
 		return 0, err
 	}
-	fmt.Println(styleSuccess.Render("✓ Added Markdown directory: " + initShortenHome(mdPath, home)))
+	fmt.Println(styleSuccess.Render("Added Markdown directory: " + initShortenHome(mdPath, home)))
 	fmt.Println()
 	return 1, nil
 }
@@ -670,14 +720,14 @@ func initStepEmail(cfg *config.Config) (bool, error) {
 	}
 
 	cfg.AuthorEmail = email
-	fmt.Println(styleSuccess.Render("✓ Git author: " + email))
+	fmt.Println(styleSuccess.Render("Git author: " + email))
 	fmt.Println()
 	return true, nil
 }
 
-// initCheckLine prints a compact "✓ label   detail" line for already-configured steps.
+// initCheckLine prints a compact "label   detail" line for already-configured steps.
 func initCheckLine(label, detail string) {
-	check := styleSuccess.Render("✓")
+	check := styleSuccess.Render("*")
 	lbl := styleBold.Render(fmt.Sprintf("%-22s", label))
 	det := styleMuted.Render(detail)
 	fmt.Printf("%s %s%s\n", check, lbl, det)
@@ -797,61 +847,7 @@ func initShortenHome(path, home string) string {
 	return path
 }
 
-// initScanObsidianVaults walks home up to maxDepth levels looking for directories
-// that contain a .obsidian/ subdirectory. It skips hidden directories and known
-// heavy directories for performance.
-func initScanObsidianVaults(home string, maxDepth int) []string {
-	skipDirs := map[string]bool{
-		"node_modules": true, "Library": true, ".Trash": true,
-		".cache": true, ".local": true, ".npm": true, ".cargo": true,
-		"go": true, ".git": true, ".nix-defexpr": true, ".nix-profile": true,
-	}
-
-	var vaults []string
-	homeDepth := strings.Count(filepath.Clean(home), string(filepath.Separator))
-
-	_ = filepath.WalkDir(home, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return filepath.SkipDir
-		}
-		if !d.IsDir() {
-			return nil
-		}
-
-		name := d.Name()
-		depth := strings.Count(filepath.Clean(path), string(filepath.Separator)) - homeDepth
-
-		// Enforce max depth.
-		if depth > maxDepth {
-			return filepath.SkipDir
-		}
-
-		// Skip hidden directories (except the root itself).
-		if depth > 0 && strings.HasPrefix(name, ".") {
-			return filepath.SkipDir
-		}
-
-		// Skip known heavy directories.
-		if skipDirs[name] {
-			return filepath.SkipDir
-		}
-
-		// Check if this directory is an Obsidian vault.
-		if initDirExists(filepath.Join(path, ".obsidian")) {
-			abs, absErr := filepath.Abs(path)
-			if absErr == nil {
-				vaults = append(vaults, abs)
-			}
-			return filepath.SkipDir
-		}
-
-		return nil
-	})
-
-	return vaults
-}
-
-// initDedup deduplicates vault paths using filepath.EvalSymlinks to handle
+// initDedup deduplicates paths using filepath.EvalSymlinks to handle
 // case-insensitive filesystems (macOS) and symlinks.
 func initDedup(paths []string) []string {
 	seen := make(map[string]bool)
@@ -873,4 +869,5 @@ func initDedup(paths []string) []string {
 func init() {
 	rootCmd.AddCommand(initCmd)
 	initCmd.Flags().BoolVarP(&initYes, "yes", "y", false, "Skip interactive confirmation, add all discovered sources")
+	initCmd.Flags().IntVar(&initScanDepth, "scan-depth", 4, "Maximum directory depth to scan for sources")
 }
