@@ -34,7 +34,7 @@ func DefaultConfig() *Config {
 		AuthorEmail:  "", // will be set from git config if available
 		AIBaseURL:    "https://api.anthropic.com/v1/",
 		AIModel:      "claude-sonnet-4-20250514",
-		AIBackend:    "api",
+		AIBackend:    "cli",
 		AICLICommand: "claude -p",
 	}
 }
@@ -128,9 +128,9 @@ week_start: monday
 # ai_api_key: sk-...                  # or set AI_API_KEY env var
 # ai_prompt: "Summarize my workday."  # override default summary prompt
 #
-# AI backend: "api" (default) calls an OpenAI-compatible API directly,
-# "cli" pipes recap data into a CLI tool instead.
-# ai_backend: api
+# AI backend: "cli" (default) pipes recap data into a CLI tool,
+# "api" calls an OpenAI-compatible API directly.
+# ai_backend: cli
 # ai_cli_command: claude -p            # CLI tool for ai_backend: cli
 `
 
