@@ -88,12 +88,6 @@ func TestRenderForAI_CondensesClaudeSessions(t *testing.T) {
 
 	aiText := aiBuf.String()
 
-	// Claude sessions should be condensed
-	if strings.Contains(aiText, "### 1.") && strings.Contains(aiText, "*(No diff available)*") {
-		// Check if there's a numbered entry for a claude source -- there shouldn't be
-		// The git entry will still have ### numbering
-	}
-
 	// Should contain condensed Claude section header
 	if !strings.Contains(aiText, "Claude Sessions (2 sessions)") {
 		t.Error("missing condensed Claude section header")
