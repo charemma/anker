@@ -114,7 +114,7 @@ week_start: monday
 # Default git author email for filtering commits
 # author_email: you@example.com
 
-# AI summary settings for "ikno recap --format ai"
+# AI summary settings (ikno recap uses AI by default)
 # Supports any OpenAI-compatible API endpoint.
 #
 # Providers:

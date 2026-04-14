@@ -8,7 +8,7 @@ Feature ideas and improvements for future releases.
 User-defined shortcuts for frequent operations.
 
 ```toml
-# ~/.anker/config.toml
+# ~/.config/ikno/config.toml
 [alias]
 track = "source add git"
 today = "report today"
@@ -21,17 +21,16 @@ See [docs/decisions/0004-dcr-command-shortcuts.md](docs/decisions/0004-dcr-comma
 Customizable report formatting for freelancers and professionals.
 
 ```bash
-anker report thisweek --format markdown
-anker report thisweek --template client-timesheet
+ikno recap thisweek --style report
+ikno recap thisweek --template client-timesheet
 ```
 
-Built-in formats: text, markdown, html, json
-User templates: `~/.anker/templates/*.tmpl`
+User templates: `~/.config/ikno/templates/*.md`
 
 **Priority:** High - differentiating feature
 See [docs/decisions/0005-dcr-report-output-format.md](docs/decisions/0005-dcr-report-output-format.md)
 
-### anker note Command
+### ikno note Command
 Implement the note command for one-off work entries.
 
 **Features:**
@@ -42,20 +41,20 @@ Implement the note command for one-off work entries.
 **Examples:**
 ```bash
 # Current time (default)
-anker note "Customer call about feature X"
+ikno note "Customer call about feature X"
 
 # Specific timestamp
-anker note "Fixed production bug" --at "2025-12-15 14:30"
-anker note "Team meeting" --at yesterday
-anker note "Code review" --at "2 hours ago"
+ikno note "Fixed production bug" --at "2025-12-15 14:30"
+ikno note "Team meeting" --at yesterday
+ikno note "Code review" --at "2 hours ago"
 
 # Date only (uses start of day)
-anker note "Started new project" --date 2025-12-01
+ikno note "Started new project" --date 2025-12-01
 ```
 
 **Storage:**
 ```
-~/.anker/entries/2025/12/2025-12-15.md
+~/.config/ikno/entries/2025/12/2025-12-15.md
 ---
 14:30 - Customer call about feature X
 16:45 - Fixed production bug
@@ -77,7 +76,7 @@ Track work-related browsing activity from browser history databases.
 
 **Example:**
 ```bash
-anker source add browser chrome --domains github.com,jira.atlassian.net
+ikno source add browser chrome --domains github.com,jira.atlassian.net
 ```
 
 **Privacy considerations:**
@@ -86,7 +85,7 @@ anker source add browser chrome --domains github.com,jira.atlassian.net
 - No sensitive URLs (password managers, private sites)
 
 ### Per-Repository Configuration
-Support `.anker` config file in individual repositories.
+Support `.ikno` config file in individual repositories.
 
 **Use case:**
 - Different author emails per project/client
@@ -95,7 +94,7 @@ Support `.anker` config file in individual repositories.
 
 **Format:**
 ```yaml
-# .anker in repo root
+# .ikno in repo root
 author_email: client@company.com
 include_branches: [main, develop]
 exclude_patterns: [WIP, fixup]
@@ -111,7 +110,7 @@ Track meetings and events as work activities.
 
 **Example:**
 ```bash
-anker source add calendar google --calendar work@company.com
+ikno source add calendar google --calendar work@company.com
 ```
 
 ### Issue Tracker Integration
@@ -133,7 +132,7 @@ Pull ticket activity from issue trackers.
 
 **Weekly summaries:**
 ```bash
-anker report thisweek --format markdown > weekly-report.md
+ikno recap thisweek --style report > weekly-report.md
 ```
 
 **Grouping options:**
@@ -165,7 +164,7 @@ Scan directories for git repositories automatically.
 
 **Example:**
 ```bash
-anker scan ~/code --recursive
+ikno scan ~/code --recursive
 ```
 
 **Features:**
@@ -177,9 +176,9 @@ anker scan ~/code --recursive
 
 **Features:**
 ```bash
-anker source add git . --author custom@email.com
-anker source add git . --no-author  # track all commits
-anker source edit git /path/to/repo --author new@email.com
+ikno source add git . --author custom@email.com
+ikno source add git . --no-author  # track all commits
+ikno source edit git /path/to/repo --author new@email.com
 ```
 
 ### Time Tracking Enhancement
@@ -193,10 +192,10 @@ Better time range specifications.
 
 ### Configuration Management
 ```bash
-anker config set author_email user@company.com
-anker config set week_start sunday
-anker config get author_email
-anker config list
+ikno config set author_email user@company.com
+ikno config set week_start sunday
+ikno config get author_email
+ikno config list
 ```
 
 ## Technical Improvements

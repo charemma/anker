@@ -16,7 +16,7 @@ ikno source add git . --author you@work.com
 ikno source add git . --author foo@work.com --author bar@personal.com
 ```
 
-By default, ikno uses your `git config --global user.email` to filter commits. You can override this with `--author` or set `author_email` in `~/.ikno/config.yaml`.
+By default, ikno uses your `git config --global user.email` to filter commits. You can override this with `--author` or set `author_email` in `~/.config/ikno/config.yaml`.
 
 **Markdown notes:**
 ```bash
@@ -33,6 +33,14 @@ ikno source add obsidian ~/Obsidian/MyVault
 ikno source add obsidian ~/Documents/"Second Brain"
 ```
 
+### Interactive Setup
+
+```bash
+ikno init
+```
+
+The init wizard scans your system for git repos, Claude Code sessions, and Obsidian vaults, then lets you select which to register.
+
 ### Managing Sources
 
 **List all sources:**
@@ -46,7 +54,7 @@ ikno source remove ~/code/my-project
 ikno source remove git ~/code/my-project  # if path is ambiguous
 ```
 
-## Generating Reports
+## Generating Recaps
 
 ### Time Specifications
 
@@ -72,101 +80,109 @@ ikno recap "october 2025"
 ikno recap "dezember 2025"  # German month names supported
 ```
 
-### Output Formats
+### Output Modes
 
-**Simple (default):**
+**AI summary (default):**
 ```bash
 ikno recap today
+ikno recap thisweek --style brief
+ikno recap yesterday --style status --lang english
 ```
-Bullet list of activities.
 
-**Detailed:**
+AI-generated summary using your configured backend. Styles: brief, digest (default), status, report, retro, stats.
+
+**Raw activity log:**
 ```bash
-ikno recap today --format detailed
+ikno recap today --raw
 ```
-Includes timestamps and metadata.
+
+Plain text list of all activities with timestamps.
 
 **JSON:**
 ```bash
-ikno recap today --format json
+ikno recap today --json
 ```
+
 Structured data for further processing.
 
-**Markdown (with git diffs):**
-```bash
-ikno recap today --format markdown
+## AI Configuration
+
+### Styles
+
+Built-in prompt styles control how the AI formats your recap:
+
+- `brief` - Quick 3-5 bullet summary
+- `digest` - Grouped by theme with highlights (default)
+- `status` - Standup-ready format
+- `report` - Professional weekly report
+- `retro` - Retrospective with lessons learned
+- `stats` - Work statistics with ASCII charts
+
+Select with `--style` flag or set a default in config:
+
+```yaml
+# ~/.config/ikno/config.yaml
+ai_default_style: digest
+ai_language: deutsch
 ```
 
-This format includes **full git diffs** for each commit, making it ideal for:
-- **AI processing** - Claude/GPT can understand the actual changes
-- **Documentation** - Full context for release notes, reports
-- **Code review** - See what actually changed
+### Backends
 
-**Example output:**
-```
-# Work Report: 2026-02-09
-
-## Git: /Users/you/code/ikno (2 commits)
-
-### 2026-02-09 14:23 - Fix authentication bug
-Author: you@example.com
-Hash: a1b2c3d
-
-diff --git a/auth/login.go b/auth/login.go
-@@ -15,7 +15,7 @@ func Login(username, password string) error {
--    if user == nil {
-+    if user == nil || !user.Active {
-         return errors.New("invalid credentials")
+**CLI backend (recommended for Claude Pro/Max subscribers):**
+```yaml
+ai_backend: cli
+ai_cli_command: claude -p     # default
 ```
 
-**Why this is powerful for AI:**
-Claude can see the actual code changes and generate more accurate summaries, release notes, or code reviews.
+No API costs -- uses your existing subscription.
+
+**API backend:**
+```yaml
+ai_backend: api
+ai_base_url: https://api.anthropic.com/v1/
+ai_model: claude-sonnet-4-20250514
+ai_api_key: sk-...
+```
+
+Supports any OpenAI-compatible endpoint (Anthropic, OpenAI, ollama, vllm).
+
+### Custom Prompts
+
+Override the built-in prompt:
+```yaml
+ai_prompt: |
+  Summarize my workday. Group by topic, not chronologically.
+  Write in German. Use ## headings and bullet points.
+```
+
+Custom prompt templates as `.md` files are also supported.
 
 ## Integration Examples
 
-### Claude CLI
+### Piping to External Tools
 
 ```bash
-# Generate standup notes with code context
-ikno recap yesterday --format markdown | claude -p "Create concise standup notes"
+# Pipe raw output to any LLM CLI
+ikno recap today --raw | claude -p "Create standup notes"
+ikno recap thisweek --raw | llm "Write a weekly report"
 
-# Weekly report with actual changes
-ikno recap thisweek --format markdown | claude -p "Write a professional weekly status report"
-
-# Code review (requires markdown format for diffs)
-ikno recap today --format markdown | claude -p "Review these changes and suggest improvements"
-
-# Full pipeline: analyze → summarize → render
-ikno recap thisweek --format markdown | claude -p "Summarize my week" | glow -p
-
-# Ask technical questions about your work
-ikno recap thisweek --format markdown | claude -p "Are there any potential bugs or security issues in these changes?"
-```
-
-### Pretty Terminal Output
-
-```bash
 # Render with glow
-ikno recap thisweek --format markdown | glow -
+ikno recap today | glow -
 
-# Interactive pager
-ikno recap thisweek --format markdown | glow -p
-
-# Syntax highlighting with bat
-ikno recap today --format markdown | bat -l markdown
+# Save to file
+ikno recap "December 2025" > monthly-report.md
 ```
 
-### Save and Process
+### Obsidian Integration
 
-```bash
-# Save to file
-ikno recap "December 2025" --format markdown > monthly-report.md
+Set `ai_prompt` in config to produce Obsidian-friendly output with wikilinks and tags:
 
-# View later
-glow monthly-report.md
-
-# Process with AI
-cat monthly-report.md | claude -p "Create release notes"
+```yaml
+ai_prompt: |
+  Summarize my workday. The output will be stored in my Obsidian vault.
+  Group by topic, use ## headings, bullet points.
+  Add tags: #recap #ikno
+  Link mentioned projects as [[Wikilinks]]
 ```
 
 ## Advanced Usage
@@ -176,23 +192,17 @@ cat monthly-report.md | claude -p "Create release notes"
 **Custom config directory:**
 ```bash
 export IKNO_HOME=/path/to/custom/config
-ikno recap today  # uses /path/to/custom/config instead of ~/.ikno
+ikno recap today  # uses /path/to/custom/config instead of ~/.config/ikno
 ```
 
-### Filtering Git Commits
+### Configuration
 
-By default, ikno filters commits by your git user.email. You can override this:
-
-**Global override:**
-```yaml
-# ~/.ikno/config.yaml
-author_email: you@work.com
-week_start: monday  # or sunday
-```
-
-**Check current git config:**
 ```bash
-git config --global user.email
+ikno config set ai_default_style brief
+ikno config set ai_language english
+ikno config set ai_backend cli
+ikno config get ai_default_style
+ikno config list
 ```
 
 ## Troubleshooting
@@ -232,8 +242,7 @@ ikno recap "last 30 days"  # Broader range
 
 ## Tips
 
-- Start by tracking your main git repositories
-- Add markdown sources for meeting notes or daily logs
+- Run `ikno init` to get started quickly
 - Use `thisweek` on Monday mornings for standup prep
-- Pipe to `glow -p` for a nice reading experience
-- Use `--format markdown` when working with AI tools
+- Try different `--style` options to find your preferred format
+- Set `ai_language` in config to get recaps in your preferred language

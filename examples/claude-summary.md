@@ -1,32 +1,44 @@
 # Generating work summaries with AI
 
-ikno collects raw activity data. Use `--format ai` to get LLM-generated summaries directly, or pipe output into any LLM CLI.
+ikno uses AI by default to generate recap summaries. Just run `ikno recap today` and get a formatted summary.
 
-## Built-in AI summary
-
-The simplest way -- ikno calls the LLM API directly and streams the response:
+## Built-in styles
 
 ```bash
-ikno recap today --format ai
-ikno recap thisweek --format ai
-ikno recap yesterday --format ai --prompt "Write a standup update."
+ikno recap today                        # default style (digest)
+ikno recap today --style brief          # quick 3-5 bullets
+ikno recap thisweek --style status      # standup format
+ikno recap thisweek --style report      # professional report
+ikno recap yesterday --style retro      # retrospective
+ikno recap thisweek --style stats       # work statistics
 ```
 
-This requires an API key and endpoint configured in `~/.ikno/config.yaml` or via environment variables. Run `ikno config` to set it up. See the config file comments for supported providers (Anthropic, OpenAI, ollama, etc.).
+Control the language with `--lang`:
 
-API key resolution: `--api-key` flag > `AI_API_KEY` env var > config file.
+```bash
+ikno recap today --lang english
+ikno recap today --lang deutsch
+```
+
+Set defaults in config:
+
+```yaml
+# ~/.config/ikno/config.yaml
+ai_default_style: digest
+ai_language: deutsch
+```
 
 ## CLI backend
 
-If you have a Claude Pro/Max subscription or another LLM CLI tool, you can use `--format ai` without API credits by switching to the CLI backend:
+If you have a Claude Pro/Max subscription or another LLM CLI tool, use the CLI backend to avoid API costs:
 
 ```yaml
-# ~/.ikno/config.yaml
+# ~/.config/ikno/config.yaml
 ai_backend: cli
 ai_cli_command: claude -p     # default
 ```
 
-This pipes your recap data via stdin to the CLI tool with the prompt as the last argument. The tool's output goes straight to your terminal. `--prompt` works as usual, `--api-key` is ignored.
+This pipes your recap data via stdin to the CLI tool with the prompt as the last argument.
 
 Other CLI tools work too:
 
@@ -35,26 +47,43 @@ ai_cli_command: llm -s        # Simon Willison's llm
 ai_cli_command: sgpt -s        # shell-gpt
 ```
 
+## API backend
+
+For direct API access:
+
+```yaml
+ai_backend: api
+ai_base_url: https://api.anthropic.com/v1/
+ai_model: claude-sonnet-4-20250514
+ai_api_key: sk-...
+```
+
+Supports any OpenAI-compatible endpoint (Anthropic, OpenAI, ollama, vllm).
+
+API key resolution: `--api-key` flag > `AI_API_KEY` env var > config file.
+
 ## Piping to an external LLM CLI
 
-You can also pipe ikno output into any LLM CLI tool:
+You can also bypass the built-in AI and pipe raw output:
 
 ```bash
-ikno recap today --format detailed | claude -p 'Summarize my workday.'
-ikno recap today --format detailed | llm 'Summarize my workday.'
+ikno recap today --raw | claude -p 'Summarize my workday.'
+ikno recap today --raw | llm 'Summarize my workday.'
 ```
 
-The `detailed` format works best here -- it includes timestamps and metadata that help the model understand the sequence and context of your work.
+## Custom prompts
 
-The `markdown` format includes full git diffs for richer context but uses more tokens:
+Override the built-in prompt templates:
 
-```bash
-ikno recap today --format markdown | claude -p 'Summarize what I worked on. Describe the actual changes, not just commit messages.'
+```yaml
+ai_prompt: |
+  Summarize my workday. Group by topic, not chronologically.
+  Write in German. Keep it concise.
 ```
+
+Custom prompt templates can also be stored as `.md` files.
 
 ## Prompt examples
-
-These work with both `--format ai --prompt "..."` and piped usage.
 
 **Standup format:**
 ```
@@ -70,13 +99,6 @@ Group by project or area. For each, list key accomplishments and open threads.
 Keep it professional but not overly formal.
 ```
 
-**With decisions and insights:**
-```
-Summarize my workday. Group by topic, not chronologically.
-For each topic, highlight decisions made (and why), key insights or lessons learned,
-and open threads. Only include these if actually present in the data.
-```
-
 **German:**
 ```
 Fasse meinen Arbeitstag zusammen.
@@ -85,19 +107,11 @@ Hebe getroffene Entscheidungen, Erkenntnisse und offene Punkte hervor.
 Schreib auf Deutsch, kurz und praegnant.
 ```
 
-**Detailed changelog:**
-```
-Create a changelog from this activity log.
-List every meaningful change with a one-line description.
-Group by repository or project.
-```
-
 ## Obsidian integration
 
-Set `ai_prompt` in your config to produce Obsidian-friendly output with wikilinks and tags. This way every recap becomes a connected note in your vault.
+Set `ai_prompt` to produce Obsidian-friendly output:
 
 ```yaml
-# ~/.ikno/config.yaml
 ai_backend: cli
 ai_cli_command: claude -p
 
@@ -117,10 +131,6 @@ ai_prompt: |
   - Link mentioned projects and tools as [[Wikilinks]]
 ```
 
-The wikilinks (`[[LPIC-1]]`, `[[Pentest]]`, `[[Nix]]`) automatically connect your recaps to existing notes. Tags like `#recap` make them easy to find and filter.
-
-Prompt resolution order: `--prompt` flag > `ai_prompt` in config > built-in default.
-
 ## Claude Code rules
 
 The `examples/claude-rules/` directory contains example rules you can copy to `.claude/rules/` to give Claude Code context about ikno when it processes your recaps.
@@ -131,11 +141,9 @@ cp examples/claude-rules/ikno-context.md .claude/rules/
 
 ## Shell alias
 
-If you use the piped approach regularly:
-
 ```bash
 ikno-summary() {
-  ikno recap "${1:-today}" --format ai
+  ikno recap "${1:-today}"
 }
 ```
 

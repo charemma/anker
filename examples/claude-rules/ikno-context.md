@@ -5,13 +5,14 @@ ikno is a CLI tool for reconstructing your workday after the fact. It collects a
 ### How ikno works
 
 - Sources are explicitly registered: `ikno source add git ~/code/project`
-- `ikno recap today` collects entries from all sources for the given time period
-- Output formats: simple (default), detailed, json, markdown, ai
-- The `ai` format sends the recap to an LLM for summarization
+- `ikno recap today` collects entries from all sources and generates an AI summary
+- Output modes: AI summary (default), `--raw` for plain text, `--json` for structured data
+- `--style` selects the AI prompt style (brief, digest, status, report, retro, stats)
+- `--lang` controls the output language
 
 ### Interpreting recap data
 
-When you receive ikno recap data (e.g. via `--format ai` or piped input):
+When you receive ikno recap data (e.g. via piped `--raw` input):
 
 - Entries are grouped by source location (repository path, vault path, etc.)
 - Each entry has a timestamp, content (commit message, note text, etc.), and metadata
