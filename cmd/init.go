@@ -230,8 +230,8 @@ func initScanHome(home string, maxDepth int, showProgress bool) scanResults {
 				return filepath.SkipDir
 			}
 
-			// Check for .git directory (don't recurse into the repo).
-			hasGit := initDirExists(filepath.Join(path, ".git"))
+			// Check for .git directory or bare git repo (don't recurse into the repo).
+			hasGit := initDirExists(filepath.Join(path, ".git")) || initIsBareGitRepo(path)
 			hasObsidian := initDirExists(filepath.Join(path, ".obsidian"))
 
 			if hasGit {
@@ -812,6 +812,16 @@ func initIsHomeDir(path string) bool {
 func initDirExists(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
+}
+
+// initIsBareGitRepo reports whether path looks like a bare git repository
+// (contains HEAD as a regular file and objects/ as a directory).
+func initIsBareGitRepo(path string) bool {
+	headInfo, err := os.Stat(filepath.Join(path, "HEAD"))
+	if err != nil || headInfo.IsDir() {
+		return false
+	}
+	return initDirExists(filepath.Join(path, "objects"))
 }
 
 // initHasMDFiles reports whether path contains at least one .md file as a direct child.
