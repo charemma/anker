@@ -132,6 +132,9 @@ week_start: monday
 # "api" calls an OpenAI-compatible API directly.
 # ai_backend: cli
 # ai_cli_command: claude -p            # CLI tool for ai_backend: cli
+#
+# Output language for AI recaps (full name, not ISO code; default: deutsch)
+# ai_language: deutsch
 `
 
 // Save writes the configuration to $IKNO_HOME/config.yaml or ~/.config/ikno/config.yaml.
