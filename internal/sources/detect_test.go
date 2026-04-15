@@ -97,6 +97,25 @@ func TestDetectType(t *testing.T) {
 			},
 			wantTypes: []string{"markdown"},
 		},
+		{
+			name: "bare git repo",
+			setup: func(t *testing.T, dir string) {
+				mkFile(t, dir, "HEAD")
+				mkDir(t, dir, "objects")
+				mkDir(t, dir, "refs")
+			},
+			wantTypes: []string{"git"},
+		},
+		{
+			name: "bare git repo with markdown files -- only git",
+			setup: func(t *testing.T, dir string) {
+				mkFile(t, dir, "HEAD")
+				mkDir(t, dir, "objects")
+				mkDir(t, dir, "refs")
+				mkFile(t, dir, "description.md")
+			},
+			wantTypes: []string{"git"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -308,6 +327,28 @@ func TestDiscoverSources(t *testing.T) {
 		}
 		if gitCount != 1 {
 			t.Errorf("expected 1 git repo, got %d", gitCount)
+		}
+	})
+
+	t.Run("finds bare git repos in direct children", func(t *testing.T) {
+		root := t.TempDir()
+		bare := mkDir(t, root, "myrepo.git")
+		mkFile(t, bare, "HEAD")
+		mkDir(t, bare, "objects")
+
+		got, err := DiscoverSources(root, 1, nil)
+		if err != nil {
+			t.Fatalf("DiscoverSources error: %v", err)
+		}
+
+		gitCount := 0
+		for _, d := range got {
+			if d.Type == "git" {
+				gitCount++
+			}
+		}
+		if gitCount != 1 {
+			t.Errorf("expected 1 bare git repo, got %d (all: %v)", gitCount, got)
 		}
 	})
 

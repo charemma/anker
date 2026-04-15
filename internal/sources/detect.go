@@ -28,13 +28,17 @@ func DetectType(path string) ([]DetectedSource, error) {
 
 	var results []DetectedSource
 
-	hasGit := isDir(filepath.Join(abs, ".git"))
+	hasDotGit := isDir(filepath.Join(abs, ".git"))
+	hasBareGit := !hasDotGit && isBareGitRepo(abs)
+	hasGit := hasDotGit || hasBareGit
 	hasObsidian := isDir(filepath.Join(abs, ".obsidian"))
 	hasClaude := isClaudePath(abs)
 
 	// git takes highest priority; obsidian is next. They are mutually exclusive.
-	if hasGit {
+	if hasDotGit {
 		results = append(results, DetectedSource{Path: abs, Type: "git", Reason: "found .git/"})
+	} else if hasBareGit {
+		results = append(results, DetectedSource{Path: abs, Type: "git", Reason: "found bare git repository"})
 	} else if hasObsidian {
 		results = append(results, DetectedSource{Path: abs, Type: "obsidian", Reason: "found .obsidian/"})
 	}
@@ -116,6 +120,16 @@ func discoverRecursive(dir string, depth int, registered map[string]bool) ([]Det
 func isDir(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
+}
+
+// isBareGitRepo returns true if path looks like a bare git repository.
+// A bare repo contains HEAD as a regular file and objects/ as a directory.
+func isBareGitRepo(path string) bool {
+	headInfo, err := os.Stat(filepath.Join(path, "HEAD"))
+	if err != nil || headInfo.IsDir() {
+		return false
+	}
+	return isDir(filepath.Join(path, "objects"))
 }
 
 // hasMDFiles returns true if path contains at least one .md file as a direct child.
