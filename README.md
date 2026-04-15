@@ -2,9 +2,9 @@
 
 > Your workday, reconstructed.
 
-From git, notes, and AI sessions -- in one command.
+Work leaves traces -- git commits, session logs, timestamped notes. ikno finds them and turns them into something you can read, share, or think with.
 
-**Website:** [ikno.charemma.de](https://ikno.charemma.de)
+[Website](https://ikno.charemma.de) | [Install](#install) | [Quick start](#quick-start)
 
 ---
 
@@ -30,12 +30,6 @@ Documentation        ██░░░░░░░░░░░░░░░░░�
 DevOps               █░░░░░░░░░░░░░░░░░░░   5%  (4)
   CI auto-tag, nix flake fixes
 
-## Work Types
-
-Building             ███████████░░░░░░░░░  55%
-Thinking             ███████░░░░░░░░░░░░░  33%
-Organizing           ██░░░░░░░░░░░░░░░░░░  12%
-
 ## Summary
 
 Full rebrand day: renamed anker to ikno, built a prompt template
@@ -44,39 +38,13 @@ system with 6 styles, and iterated on logo/naming.
 
 ---
 
-## More styles
+## Why ikno
 
-**Standup (brief):**
-```
-$ ikno recap today --style brief
+Context switches make it hard to remember what you did. You jump between repos, tickets, chats, and coding sessions all day. By the end, half of it is gone.
 
-Done
-- Renamed anker to ikno (full rebrand)
-- Added prompt template system with --style/--lang flags
-- Implemented stats style with ASCII charts
-- Set up auto-tagging CI
+Planning tools like GTD or Zettelkasten help you decide what comes next. But looking back at what actually happened? That was always a gap you had to fill manually.
 
-Next
-- Logo finalization for ikno
-- Custom template docs/polish
-```
-
-**Retrospective:**
-```
-$ ikno recap thisweek --style retro
-
-### What went well
-- The anker-to-ikno rename landed cleanly across module, CLI, config, docs.
-- Prompt template system shipped in one day: 6 built-in styles, custom templates, --lang flag.
-
-### What didn't go well
-- Stats output formatting needed three consecutive fix commits.
-- Logo design went nowhere after three sessions.
-
-### Learnings
-- Test AI output against the terminal renderer before committing.
-- Parallel-agent pattern for naming worked well -- worth repeating.
-```
+ikno closes that gap. Your existing tools become input sources -- Obsidian vault, git repos, Claude Code sessions. ikno reads them all and reconstructs what happened. No logging, no discipline. You work, then you ask.
 
 ---
 
@@ -106,7 +74,7 @@ ikno init
 ikno recap thisweek
 ```
 
-`ikno init` detects git repos in your current directory, Claude Code sessions in `~/.claude/projects/`, and an Obsidian vault if one is configured. You can add more sources explicitly at any time.
+`ikno init` scans your home directory for git repos, Obsidian vaults, and Claude Code sessions. Select what to track, and you're done.
 
 ---
 
@@ -119,7 +87,7 @@ ikno reconstructs your day from the data you already generate:
 - **Obsidian** -- files modified or created in your vault
 - **Claude Code** -- AI coding sessions from `~/.claude/projects/`
 
-Add sources explicitly when auto-detection is not enough:
+More sources are planned (Jira, Slack, calendar, browser history). The architecture is extensible -- adding a new source type doesn't require changing core code.
 
 ```bash
 ikno source add git ~/code/my-project
@@ -131,38 +99,28 @@ ikno source list
 
 ## Styles
 
-ikno ships with 6 built-in report styles. Pick the one that fits your audience:
+6 built-in report styles. Pick the one that fits:
 
 ```bash
-ikno recap thisweek --style brief     # Done / Next / Blockers (5-10 lines)
-ikno recap thisweek                  # digest -- full overview (default)
-ikno recap thisweek --style status   # Progress / Blockers / Next
-ikno recap thisweek --style report   # Polished prose, deliveries first
-ikno recap thisweek --style retro    # What went well / badly / learnings
-ikno recap thisweek --style stats     # Category breakdown with ASCII charts
+ikno recap thisweek --style brief     # standup-ready (5-10 lines)
+ikno recap thisweek                   # digest -- full overview (default)
+ikno recap thisweek --style status    # progress / blockers / next
+ikno recap thisweek --style report    # polished prose for stakeholders
+ikno recap thisweek --style retro     # what went well / badly / learnings
+ikno recap thisweek --style stats     # category breakdown with ASCII charts
 ```
 
-See what each style does: `ikno recap --styles`
-
 ## Any language
-
-Every report -- headings, bullets, everything -- is written in the language you choose:
 
 ```bash
 ikno recap thisweek --lang english
 ikno recap thisweek --lang deutsch
-ikno recap thisweek --lang greek
-```
-
-Set a default so you don't have to type it every time:
-
-```bash
-ikno config set ai_language english
+ikno config set ai_language english    # set default
 ```
 
 ## Custom templates
 
-Need a report for a specific client, a weekly team email, or a format your manager prefers? Create your own style as a `.md` file:
+Create your own style as a `.md` file:
 
 ```bash
 mkdir -p ~/.config/ikno/templates
@@ -181,11 +139,7 @@ EOF
 ikno recap thisweek --style client-acme
 ```
 
-List all available styles (built-in + custom):
-
-```bash
-ikno recap --styles
-```
+---
 
 ## AI backend
 
@@ -217,12 +171,10 @@ ikno recap 2025-04-01..2025-04-30
 
 ## Raw output and pipes
 
-Need the raw activity data for scripts, grep, or your own processing? Use `--raw`:
-
 ```bash
 ikno recap thisweek --raw > this-week.txt
 ikno recap thisweek --raw | grep "feat"
-ikno recap thisweek --json              # structured JSON
+ikno recap thisweek --json
 ```
 
 ---
@@ -236,18 +188,6 @@ author_email: you@example.com
 ai_default_style: digest
 ai_language: en
 ```
-
----
-
-## Philosophy
-
-Most tools ask you to track everything up front -- every minute, every switch, every task. They turn your work into metrics. ikno does not.
-
-You work normally. At the end of the day (or week), you run one command and get a readable account of what actually happened. No timers, no categories, no logging discipline required.
-
-The insight behind ikno: the traces are already there. Git commits, session histories, timestamped notes -- your work leaves marks. ikno reads those marks and turns them into something you can read, share, or think with.
-
-No background agents. No cloud sync. Everything stays in `~/.config/ikno/`.
 
 ---
 
