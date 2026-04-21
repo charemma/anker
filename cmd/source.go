@@ -288,9 +288,29 @@ func addSingleSource(store *storage.Store, sourceType, path string) error {
 			srcCfg.Metadata["author"] = strings.Join(gitAuthors, ",")
 		} else {
 			cfg, err := config.Load()
-			if err == nil && cfg.AuthorEmail != "" {
-				srcCfg.Metadata["author"] = cfg.AuthorEmail
+			if err == nil {
+				// Combine author_email and author_aliases
+				var allAuthors []string
+				if cfg.AuthorEmail != "" {
+					allAuthors = append(allAuthors, cfg.AuthorEmail)
+				}
+				allAuthors = append(allAuthors, cfg.AuthorAliases...)
+
+				if len(allAuthors) > 0 {
+					srcCfg.Metadata["author"] = strings.Join(allAuthors, ",")
+				} else {
+					// Fallback to git config
+					if email, err := git.GetAuthorEmail(); err == nil && email != "" {
+						srcCfg.Metadata["author"] = email
+						_, _ = fmt.Printf("using git user.email: %s\n", email)
+					} else {
+						_, _ = fmt.Println(ui.StyleMuted.Render("warning: no author email configured - will track ALL commits in this repo"))
+						_, _ = fmt.Println(ui.StyleMuted.Render("  set author with: --author your@email.com"))
+						_, _ = fmt.Println(ui.StyleMuted.Render("  or configure git: git config --global user.email your@email.com"))
+					}
+				}
 			} else {
+				// Config loading failed, try git config as fallback
 				if email, err := git.GetAuthorEmail(); err == nil && email != "" {
 					srcCfg.Metadata["author"] = email
 					_, _ = fmt.Printf("using git user.email: %s\n", email)

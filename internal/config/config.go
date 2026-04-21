@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/charemma/ikno/internal/git"
 	"github.com/charemma/ikno/internal/paths"
@@ -14,29 +15,44 @@ import (
 
 // Config holds user configuration for ikno.
 type Config struct {
-	WeekStart      string `yaml:"week_start"`             // "monday" or "sunday"
-	AuthorEmail    string `yaml:"author_email,omitempty"` // default git author email for filtering
-	AIBaseURL      string `yaml:"ai_base_url"`            // OpenAI-compatible API base URL
-	AIModel        string `yaml:"ai_model"`               // model name for AI summaries
-	AIAPIKey       string `yaml:"ai_api_key"`             // API key (prefer env var AI_API_KEY)
-	AIPrompt       string `yaml:"ai_prompt"`              // custom prompt for AI summaries
-	AIBackend      string `yaml:"ai_backend"`             // "api" or "cli"
-	AICLICommand   string `yaml:"ai_cli_command"`         // CLI tool for ai_backend: cli
-	AIDefaultStyle string `yaml:"ai_default_style"`       // default output style: brief, digest, status, report, retro
-	AILanguage     string `yaml:"ai_language"`            // output language passed to AI (e.g. "deutsch", "english")
+	WeekStart      string   `yaml:"week_start"`               // "monday" or "sunday"
+	AuthorEmail    string   `yaml:"author_email,omitempty"`   // default git author email for filtering
+	AuthorAliases  []string `yaml:"author_aliases,omitempty"` // additional author emails for multi-identity matching
+	Timezone       string   `yaml:"timezone,omitempty"`       // timezone (auto-detected from system if not set)
+	AIBaseURL      string   `yaml:"ai_base_url"`              // OpenAI-compatible API base URL
+	AIModel        string   `yaml:"ai_model"`                 // model name for AI summaries
+	AIAPIKey       string   `yaml:"ai_api_key"`               // API key (prefer env var AI_API_KEY)
+	AIPrompt       string   `yaml:"ai_prompt"`                // custom prompt for AI summaries
+	AIBackend      string   `yaml:"ai_backend"`               // "api" or "cli"
+	AICLICommand   string   `yaml:"ai_cli_command"`           // CLI tool for ai_backend: cli
+	AIDefaultStyle string   `yaml:"ai_default_style"`         // default output style: brief, digest, status, report, retro
+	AILanguage     string   `yaml:"ai_language"`              // output language passed to AI (e.g. "deutsch", "english")
 }
 
 // DefaultConfig returns the default configuration.
-// Attempts to read author email from git config.
+// Attempts to read author email from git config and auto-detects timezone.
 func DefaultConfig() *Config {
 	return &Config{
-		WeekStart:    "monday",
-		AuthorEmail:  "", // will be set from git config if available
-		AIBaseURL:    "https://api.anthropic.com/v1/",
-		AIModel:      "claude-sonnet-4-20250514",
-		AIBackend:    "cli",
-		AICLICommand: "claude -p",
+		WeekStart:     "monday",
+		AuthorEmail:   "",         // will be set from git config if available
+		AuthorAliases: []string{}, // empty by default
+		Timezone:      detectTimezone(),
+		AIBaseURL:     "https://api.anthropic.com/v1/",
+		AIModel:       "claude-sonnet-4-20250514",
+		AIBackend:     "cli",
+		AICLICommand:  "claude -p",
 	}
+}
+
+// detectTimezone returns the system timezone name (e.g. "Europe/Athens", "America/New_York").
+// Falls back to "UTC" if detection fails.
+func detectTimezone() string {
+	loc := time.Now().Location()
+	name := loc.String()
+	if name == "" || name == "Local" {
+		return "UTC"
+	}
+	return name
 }
 
 // Load reads the configuration from $IKNO_HOME/config.yaml or ~/.config/ikno/config.yaml.
@@ -91,6 +107,11 @@ func Load() (*Config, error) {
 		}
 	}
 
+	// Auto-detect timezone if not set
+	if cfg.Timezone == "" {
+		cfg.Timezone = detectTimezone()
+	}
+
 	return cfg, nil
 }
 
@@ -113,6 +134,15 @@ week_start: monday
 
 # Default git author email for filtering commits
 # author_email: you@example.com
+
+# Additional author emails for multi-identity matching
+# Useful when you commit with different emails (work, personal, etc.)
+# author_aliases:
+#   - work@company.com
+#   - personal@example.com
+
+# Timezone (auto-detected from system if not set)
+# timezone: Europe/Athens
 
 # AI summary settings (ikno recap uses AI by default)
 # Supports any OpenAI-compatible API endpoint.
