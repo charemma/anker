@@ -1,0 +1,40 @@
+# Fix a GitHub issue: fetch -> implement -> review.
+# Use for bug fixes, small improvements, and follow-up tasks where
+# the problem is already defined. No design step needed.
+#
+# Usage: koto up fix-issue issue=68
+
+version: "1"
+name: fix-issue
+prompt: |
+  Fix issue #{{issue}} in this repository. Fetch the issue details using
+  the gh CLI, understand the problem, and implement the fix.
+
+flow:
+  fetch:
+    agent: Minion
+    task: |
+      Fetch issue #{{issue}} using gh issue view. Also fetch any linked PRs
+      or referenced files mentioned in the issue. Output the raw data.
+  implement:
+    agent: Noah
+    input: [fetch]
+    task: |
+      Implement the fix. Create a feature branch, make the changes, write
+      tests, and commit. Keep changes minimal and focused on the issue.
+      Do not fix unrelated things.
+  review:
+    agent: Bella
+    input: [fetch, implement]
+    task: |
+      Review the implementation against the issue requirements.
+      Verify the fix is correct, tests cover the change, and nothing
+      unrelated was modified. If changes are needed, list them concretely.
+  ship:
+    agent: Noah
+    input: [review]
+    print_output: true
+    task: |
+      If the review has no blocking issues, push the branch and create
+      a PR linking to the issue. Use a clear title and concise description.
+      If the review found issues, fix them first, then create the PR.
