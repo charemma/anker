@@ -758,6 +758,9 @@ func initStepLanguage(cfg *config.Config) (bool, error) {
 	}
 	fmt.Println()
 
+	// Trim whitespace from input.
+	lang = strings.TrimSpace(lang)
+
 	if lang == "" {
 		return false, nil
 	}

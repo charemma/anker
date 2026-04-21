@@ -2,6 +2,50 @@ package cmd
 
 import "testing"
 
+func TestResolveLanguage(t *testing.T) {
+	tests := []struct {
+		name          string
+		flagValue     string
+		configDefault string
+		want          string
+	}{
+		{
+			name:          "flag takes precedence",
+			flagValue:     "english",
+			configDefault: "deutsch",
+			want:          "english",
+		},
+		{
+			name:          "config used when flag empty",
+			flagValue:     "",
+			configDefault: "greek",
+			want:          "greek",
+		},
+		{
+			name:          "default when both empty",
+			flagValue:     "",
+			configDefault: "",
+			want:          "english",
+		},
+		{
+			name:          "flag overrides empty config",
+			flagValue:     "spanish",
+			configDefault: "",
+			want:          "spanish",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := resolveLanguage(tt.flagValue, tt.configDefault)
+			if got != tt.want {
+				t.Errorf("resolveLanguage(%q, %q) = %q, want %q",
+					tt.flagValue, tt.configDefault, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestParseTemplateFile(t *testing.T) {
 	tests := []struct {
 		name        string
