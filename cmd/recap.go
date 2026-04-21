@@ -82,7 +82,7 @@ Examples:
 		// Resolve style: --style flag > config ai_default_style > "digest"
 		style := resolveStyle(recapStyle, cfg.AIDefaultStyle)
 
-		// Resolve language: --lang flag > config ai_language > "deutsch"
+		// Resolve language: --lang flag > config ai_language > "english"
 		lang := resolveLanguage(recapLang, cfg.AILanguage)
 
 		// Resolve timespec: explicit arg > style default
@@ -355,7 +355,7 @@ func runListStyles(w *os.File, verbose bool) error {
 	return nil
 }
 
-// resolveLanguage returns the effective output language from flag, config, or "deutsch".
+// resolveLanguage returns the effective output language from flag, config, or "english".
 func resolveLanguage(flagValue, configDefault string) string {
 	if flagValue != "" {
 		return flagValue
@@ -363,7 +363,7 @@ func resolveLanguage(flagValue, configDefault string) string {
 	if configDefault != "" {
 		return configDefault
 	}
-	return "deutsch"
+	return "english"
 }
 
 // resolveStyle returns the effective style from flag, config default, or "self".
