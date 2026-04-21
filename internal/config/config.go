@@ -41,6 +41,7 @@ func DefaultConfig() *Config {
 		AIModel:       "claude-sonnet-4-20250514",
 		AIBackend:     "cli",
 		AICLICommand:  "claude -p",
+		AILanguage:    "deutsch", // default output language for AI summaries
 	}
 }
 
