@@ -9,7 +9,21 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 )
+
+// httpClient is shared by all LLM API calls. Deadlines bound connection
+// setup and the wait for response headers so a slow or hung endpoint
+// cannot tie up the CLI indefinitely. Once headers arrive, the streaming
+// body is unrestricted — legitimate long generations (e.g. a 7B model on
+// CPU taking several minutes) complete normally.
+var httpClient = &http.Client{
+	Transport: &http.Transport{
+		ResponseHeaderTimeout: 60 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		IdleConnTimeout:       30 * time.Second,
+	},
+}
 
 type Client struct {
 	BaseURL string
@@ -47,7 +61,7 @@ func (c *Client) StreamCompletion(ctx context.Context, systemPrompt, userContent
 		return err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("API request failed: %w", err)
 	}
