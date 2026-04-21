@@ -112,6 +112,13 @@ func Load() (*Config, error) {
 		cfg.Timezone = detectTimezone()
 	}
 
+	// Validate timezone is a valid IANA timezone name
+	if cfg.Timezone != "" {
+		if _, err := time.LoadLocation(cfg.Timezone); err != nil {
+			return nil, fmt.Errorf("invalid timezone %q: %w", cfg.Timezone, err)
+		}
+	}
+
 	return cfg, nil
 }
 
@@ -162,6 +169,11 @@ week_start: monday
 # "api" calls an OpenAI-compatible API directly.
 # ai_backend: cli
 # ai_cli_command: claude -p            # CLI tool for ai_backend: cli
+#
+# Output language for AI summaries (default: deutsch)
+# Use full language names: deutsch, english, greek, etc.
+# Overridable with --lang flag on each recap command.
+# ai_language: deutsch
 `
 
 // Save writes the configuration to $IKNO_HOME/config.yaml or ~/.config/ikno/config.yaml.

@@ -148,7 +148,15 @@ Examples:
 			}
 		}
 
-		if emailChanged {
+		languageChanged := false
+		if !initYes {
+			languageChanged, runErr = initStepLanguage(cfg)
+			if runErr != nil {
+				return runErr
+			}
+		}
+
+		if emailChanged || languageChanged {
 			if err := config.Save(cfg); err != nil {
 				_, _ = fmt.Fprintf(os.Stderr, "warning: could not save config: %v\n", err)
 			}
@@ -721,6 +729,43 @@ func initStepEmail(cfg *config.Config) (bool, error) {
 
 	cfg.AuthorEmail = email
 	fmt.Println(styleSuccess.Render("Git author: " + email))
+	fmt.Println()
+	return true, nil
+}
+
+// initStepLanguage handles the output language configuration step.
+// Returns true if the language was updated and config should be saved.
+func initStepLanguage(cfg *config.Config) (bool, error) {
+	// Already persisted in config.yaml: show compact line, nothing to do.
+	if cfg.AILanguage != "" {
+		initCheckLine("Output language", cfg.AILanguage+" (already configured)")
+		return false, nil
+	}
+
+	initSectionHeader("Output language for AI summaries")
+
+	var lang string
+	if err := huh.NewInput().
+		Title("Output language for AI summaries (e.g. deutsch, english, greek)").
+		Placeholder("deutsch").
+		Value(&lang).
+		Run(); initIsAbort(err) {
+		fmt.Println()
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+	fmt.Println()
+
+	// Trim whitespace from input.
+	lang = strings.TrimSpace(lang)
+
+	if lang == "" {
+		return false, nil
+	}
+
+	cfg.AILanguage = lang
+	fmt.Println(styleSuccess.Render("Output language: " + lang))
 	fmt.Println()
 	return true, nil
 }
