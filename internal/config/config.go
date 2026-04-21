@@ -41,7 +41,7 @@ func DefaultConfig() *Config {
 		AIModel:       "claude-sonnet-4-20250514",
 		AIBackend:     "cli",
 		AICLICommand:  "claude -p",
-		AILanguage:    "deutsch", // default output language for AI summaries
+		AILanguage:    "english", // default output language for AI summaries
 	}
 }
 
@@ -164,10 +164,10 @@ week_start: monday
 # ai_backend: cli
 # ai_cli_command: claude -p            # CLI tool for ai_backend: cli
 #
-# Output language for AI summaries (default: deutsch)
+# Output language for AI summaries (default: english)
 # Use full language names: deutsch, english, greek, etc.
 # Overridable with --lang flag on each recap command.
-# ai_language: deutsch
+# ai_language: english
 `
 
 // Save writes the configuration to $IKNO_HOME/config.yaml or ~/.config/ikno/config.yaml.

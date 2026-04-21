@@ -363,7 +363,7 @@ func resolveLanguage(flagValue, configDefault string) string {
 	if configDefault != "" {
 		return configDefault
 	}
-	return "deutsch"
+	return "english"
 }
 
 // resolveStyle returns the effective style from flag, config default, or "self".

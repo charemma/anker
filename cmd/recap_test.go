@@ -25,7 +25,7 @@ func TestResolveLanguage(t *testing.T) {
 			name:          "default when both empty",
 			flagValue:     "",
 			configDefault: "",
-			want:          "deutsch",
+			want:          "english",
 		},
 		{
 			name:          "flag overrides empty config",
