@@ -140,15 +140,26 @@ Examples:
 			return runErr
 		}
 
-		emailChanged := false
+		configChanged := false
 		if !initYes {
-			emailChanged, runErr = initStepEmail(cfg)
+			emailChanged, runErr := initStepEmail(cfg)
 			if runErr != nil {
 				return runErr
 			}
+			if emailChanged {
+				configChanged = true
+			}
+
+			langChanged, runErr := initStepLanguage(cfg)
+			if runErr != nil {
+				return runErr
+			}
+			if langChanged {
+				configChanged = true
+			}
 		}
 
-		if emailChanged {
+		if configChanged {
 			if err := config.Save(cfg); err != nil {
 				_, _ = fmt.Fprintf(os.Stderr, "warning: could not save config: %v\n", err)
 			}
@@ -721,6 +732,38 @@ func initStepEmail(cfg *config.Config) (bool, error) {
 
 	cfg.AuthorEmail = email
 	fmt.Println(styleSuccess.Render("Git author: " + email))
+	fmt.Println()
+	return true, nil
+}
+
+// initStepLanguage handles the recap language configuration step.
+// Returns true if the language was updated and config should be saved.
+func initStepLanguage(cfg *config.Config) (bool, error) {
+	if cfg.AILanguage != "" {
+		initCheckLine("Recap language", cfg.AILanguage+" (already configured)")
+		return false, nil
+	}
+
+	initSectionHeader("Recap language")
+
+	var lang string
+	if err := huh.NewInput().
+		Title("Language for AI recaps (e.g. english, deutsch, español)").
+		Value(&lang).
+		Run(); initIsAbort(err) {
+		fmt.Println()
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+	fmt.Println()
+
+	if lang == "" {
+		return false, nil
+	}
+
+	cfg.AILanguage = lang
+	fmt.Println(styleSuccess.Render("Recap language: " + lang))
 	fmt.Println()
 	return true, nil
 }
