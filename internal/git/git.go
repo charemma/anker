@@ -8,9 +8,9 @@ import (
 
 var ErrNotInRepo = errors.New("not in a git repository")
 
-// isBareGitRepo returns true if path looks like a bare git repository.
+// IsBareGitRepo returns true if path looks like a bare git repository.
 // A bare repo contains HEAD as a regular file and objects/ as a directory.
-func isBareGitRepo(path string) bool {
+func IsBareGitRepo(path string) bool {
 	headInfo, err := os.Stat(filepath.Join(path, "HEAD"))
 	if err != nil || headInfo.IsDir() {
 		return false
@@ -35,7 +35,7 @@ func FindRepoRoot(startPath string) (string, error) {
 			return current, nil
 		}
 
-		if isBareGitRepo(current) {
+		if IsBareGitRepo(current) {
 			return current, nil
 		}
 
