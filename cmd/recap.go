@@ -355,7 +355,7 @@ func runListStyles(w *os.File, verbose bool) error {
 	return nil
 }
 
-// resolveLanguage returns the effective output language from flag, config, or "english".
+// resolveLanguage returns the effective output language from flag, config, or "deutsch".
 func resolveLanguage(flagValue, configDefault string) string {
 	if flagValue != "" {
 		return flagValue
@@ -363,7 +363,7 @@ func resolveLanguage(flagValue, configDefault string) string {
 	if configDefault != "" {
 		return configDefault
 	}
-	return "english"
+	return "deutsch"
 }
 
 // resolveStyle returns the effective style from flag, config default, or "self".

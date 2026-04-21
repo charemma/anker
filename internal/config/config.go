@@ -164,7 +164,9 @@ week_start: monday
 # ai_backend: cli
 # ai_cli_command: claude -p            # CLI tool for ai_backend: cli
 #
-# Output language for AI recaps (full name, not ISO code; default: deutsch)
+# Output language for AI summaries (default: deutsch)
+# Use full language names: deutsch, english, greek, etc.
+# Overridable with --lang flag on each recap command.
 # ai_language: deutsch
 `
 
