@@ -155,8 +155,8 @@ func TestStreamCompletion_HeaderTimeout(t *testing.T) {
 	// Validate the error is timeout-related by checking the error chain.
 	// ResponseHeaderTimeout results in a net.Error with Timeout() returning true.
 	var netErr net.Error
-	if !errors.As(err, &netErr) && !strings.Contains(err.Error(), "timeout") && !strings.Contains(err.Error(), "Timeout") {
-		t.Errorf("expected timeout-related error, got: %v (type %T)", err, err)
+	if !errors.As(err, &netErr) || !netErr.Timeout() {
+		t.Errorf("expected timeout error with Timeout()==true, got: %v (type %T)", err, err)
 	}
 
 	// Tighten the timeout assertion: we set ResponseHeaderTimeout to 100ms,
