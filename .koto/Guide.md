@@ -48,6 +48,16 @@ internal/
 - Table-driven tests, t.TempDir() for filesystem tests
 - Conventional commits, feature branches
 
+## Running Flows
+
+```
+koto up review-pr pr=67          # review a PR
+koto up fix-issue issue=68       # fix a GitHub issue
+koto up development -t "Add obsidian source type for daily notes"
+```
+
+Outputs are written to `~/.koto/stacks/ikno/`. Steps with `print_output: true` display their result in the terminal after the flow completes.
+
 ## Decisions
 
 ADRs live in `docs/decisions/`. They are for internal use by the maintainer.

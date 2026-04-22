@@ -1,4 +1,5 @@
 # Go Developer Rules
+<!-- Derived from ~/.claude/rules/go.md -- keep in sync on major updates -->
 
 ## Code Quality
 
