@@ -1,0 +1,39 @@
+# New feature development: design -> implement -> review.
+# Use for features that need architectural decisions before coding.
+# For bug fixes or small changes, use fix-issue instead.
+#
+# Usage: koto up development -t "Add obsidian source type for daily notes"
+
+version: "1"
+name: development
+
+flow:
+  design:
+    agent: Levi
+    task: |
+      Analyze the feature request and design the implementation approach.
+      Consider how it fits the existing architecture, define interfaces,
+      and identify edge cases. Output a concise design doc with file
+      changes needed. Do not write code yet.
+  implement:
+    agent: Noah
+    input: [design]
+    task: |
+      Implement the feature based on the design. Create a feature branch,
+      write clean code and tests following the project patterns. Commit
+      with conventional commit messages.
+  review:
+    agent: Bella
+    input: [design, implement]
+    task: |
+      Review the implementation against the design. Verify correctness,
+      test coverage, and consistency with existing patterns. If changes
+      are needed, list them concretely.
+  ship:
+    agent: Noah
+    input: [review]
+    print_output: true
+    task: |
+      If the review has no blocking issues, push the branch and create
+      a PR with a clear title and concise description. If the review
+      found issues, fix them first, then create the PR.

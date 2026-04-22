@@ -1,0 +1,58 @@
+# Review a GitHub PR: fetch -> architecture + code-review -> consensus.
+# Produces a copy-paste ready PR comment with concrete suggestions.
+#
+# Usage: koto up review-pr pr=67
+
+version: "1"
+name: review-pr
+prompt: |
+  Review PR #{{pr}} in this repository. Evaluate the changes thoroughly.
+
+flow:
+  fetch:
+    agent: Minion
+    task: |
+      Fetch PR #{{pr}} using the gh CLI. Run gh pr view and gh pr diff.
+      Output the full PR description and diff as-is, nothing else.
+      Do not analyze or comment -- just output the raw data.
+  architecture:
+    agent: Levi
+    input: [fetch]
+    task: |
+      Evaluate the design decisions and architectural impact. Does this
+      change fit the project structure? Are there better approaches?
+      Check for unnecessary complexity or missing abstractions.
+  code-review:
+    agent: Bella
+    input: [fetch]
+    task: |
+      Review the implementation for correctness, error handling, test
+      coverage, Go idioms, and consistency with existing patterns.
+      Flag concrete issues with file paths and line numbers.
+      Be constructive -- suggest improvements, don't just list problems.
+  consensus:
+    agent: Mika
+    input: [architecture, code-review]
+    print_output: true
+    task: |
+      Output ONLY a GitHub PR comment, ready to copy-paste as-is.
+      No preamble, no meta-commentary, no wrapper text -- start directly
+      with the verdict line.
+      Your job is to distill the BEST suggestions from the previous reviews,
+      not to invent new ones. Only include suggestions that are within the
+      scope of what the PR is trying to do -- no feature creep, no "while
+      you're at it" additions. If the PR fixes a bug, don't ask for
+      unrelated refactoring.
+      For each suggestion, one sentence why + a minimal code snippet (2-5 lines).
+      Never estimate effort or time ("30 minutes", "quick fix", etc.).
+      Never suggest ADRs or decision records. Documentation suggestions are
+      OK only when the PR introduces something genuinely new that would be
+      unclear without docs -- do not suggest docs for routine changes.
+      No emojis anywhere in the output. No bonus or extra sections.
+      Keep the entire comment under 40 lines. Be concise -- this lands in
+      a PR thread, not a design doc.
+      Format:
+      1. One-line verdict (approve / request changes / approve with suggestions)
+      2. Numbered suggestions, scoped to the PR
+      3. Brief closing line
+      Be direct but friendly.
