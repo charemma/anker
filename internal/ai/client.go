@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -17,13 +18,19 @@ import (
 // cannot tie up the CLI indefinitely. Once headers arrive, the streaming
 // body is unrestricted — legitimate long generations (e.g. a 7B model on
 // CPU taking several minutes) complete normally.
-var httpClient = &http.Client{
-	Transport: &http.Transport{
-		ResponseHeaderTimeout: 60 * time.Second,
-		TLSHandshakeTimeout:   10 * time.Second,
-		IdleConnTimeout:       30 * time.Second,
-	},
-}
+//
+// We clone http.DefaultTransport to preserve proxy support, system dialer
+// settings, HTTP/2, and other defaults that a bare &http.Transport{} would lose.
+var httpClient = func() *http.Client {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.DialContext = (&net.Dialer{
+		Timeout: 10 * time.Second,
+	}).DialContext
+	transport.ResponseHeaderTimeout = 60 * time.Second
+	transport.TLSHandshakeTimeout = 10 * time.Second
+	transport.IdleConnTimeout = 30 * time.Second
+	return &http.Client{Transport: transport}
+}()
 
 type Client struct {
 	BaseURL string

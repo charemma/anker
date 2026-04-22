@@ -3,7 +3,9 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -135,11 +137,9 @@ func TestStreamCompletion_HeaderTimeout(t *testing.T) {
 	}()
 
 	origClient := httpClient
-	httpClient = &http.Client{
-		Transport: &http.Transport{
-			ResponseHeaderTimeout: 100 * time.Millisecond,
-		},
-	}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.ResponseHeaderTimeout = 100 * time.Millisecond
+	httpClient = &http.Client{Transport: transport}
 	defer func() { httpClient = origClient }()
 
 	c := &Client{BaseURL: server.URL + "/v1/", APIKey: "x", Model: "test"}
@@ -151,8 +151,18 @@ func TestStreamCompletion_HeaderTimeout(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected timeout error, got nil")
 	}
-	if elapsed > time.Second {
-		t.Errorf("expected fail within ~100ms header timeout, got %v", elapsed)
+
+	// Validate the error is timeout-related by checking the error chain.
+	// ResponseHeaderTimeout results in a net.Error with Timeout() returning true.
+	var netErr net.Error
+	if !errors.As(err, &netErr) && !strings.Contains(err.Error(), "timeout") && !strings.Contains(err.Error(), "Timeout") {
+		t.Errorf("expected timeout-related error, got: %v (type %T)", err, err)
+	}
+
+	// Tighten the timeout assertion: we set ResponseHeaderTimeout to 100ms,
+	// so the request should fail promptly within ~300ms.
+	if elapsed > 300*time.Millisecond {
+		t.Errorf("expected fail within ~300ms, got %v", elapsed)
 	}
 }
 
