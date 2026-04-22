@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -17,18 +18,38 @@ import (
 // cannot tie up the CLI indefinitely. Once headers arrive, the streaming
 // body is unrestricted — legitimate long generations (e.g. a 7B model on
 // CPU taking several minutes) complete normally.
-var httpClient = &http.Client{
-	Transport: &http.Transport{
-		ResponseHeaderTimeout: 60 * time.Second,
-		TLSHandshakeTimeout:   10 * time.Second,
-		IdleConnTimeout:       30 * time.Second,
-	},
+//
+// We clone http.DefaultTransport to preserve proxy support, system dialer
+// settings, HTTP/2, and other defaults that a bare &http.Transport{} would lose.
+var httpClient = func() *http.Client {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.DialContext = (&net.Dialer{
+		Timeout: 10 * time.Second,
+	}).DialContext
+	transport.ResponseHeaderTimeout = 60 * time.Second
+	transport.TLSHandshakeTimeout = 10 * time.Second
+	transport.IdleConnTimeout = 30 * time.Second
+	return &http.Client{Transport: transport}
+}()
+
+// newHTTPClientWithTimeout creates an HTTP client with a custom ResponseHeaderTimeout.
+// It clones http.DefaultTransport to preserve proxy support and system settings.
+func newHTTPClientWithTimeout(timeout time.Duration) *http.Client {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.DialContext = (&net.Dialer{
+		Timeout: 10 * time.Second,
+	}).DialContext
+	transport.ResponseHeaderTimeout = timeout
+	transport.TLSHandshakeTimeout = 10 * time.Second
+	transport.IdleConnTimeout = 30 * time.Second
+	return &http.Client{Transport: transport}
 }
 
 type Client struct {
-	BaseURL string
-	APIKey  string
-	Model   string
+	BaseURL    string
+	APIKey     string
+	Model      string
+	httpClient *http.Client // optional; if nil, uses the global default
 }
 
 type chatRequest struct {
@@ -61,7 +82,12 @@ func (c *Client) StreamCompletion(ctx context.Context, systemPrompt, userContent
 		return err
 	}
 
-	resp, err := httpClient.Do(req)
+	client := httpClient
+	if c.httpClient != nil {
+		client = c.httpClient
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("API request failed: %w", err)
 	}

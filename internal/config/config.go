@@ -13,6 +13,31 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Duration wraps time.Duration to provide YAML unmarshaling support.
+// YAML can parse strings like "60s", "1m", "5m" into time.Duration.
+type Duration time.Duration
+
+// UnmarshalYAML implements yaml.Unmarshaler for Duration.
+func (d *Duration) UnmarshalYAML(value *yaml.Node) error {
+	var s string
+	if err := value.Decode(&s); err != nil {
+		return err
+	}
+
+	parsed, err := time.ParseDuration(s)
+	if err != nil {
+		return fmt.Errorf("invalid duration format: %w", err)
+	}
+
+	*d = Duration(parsed)
+	return nil
+}
+
+// ToDuration converts Duration to time.Duration.
+func (d Duration) ToDuration() time.Duration {
+	return time.Duration(d)
+}
+
 // Config holds user configuration for ikno.
 type Config struct {
 	WeekStart      string   `yaml:"week_start"`               // "monday" or "sunday"
@@ -27,6 +52,7 @@ type Config struct {
 	AICLICommand   string   `yaml:"ai_cli_command"`           // CLI tool for ai_backend: cli
 	AIDefaultStyle string   `yaml:"ai_default_style"`         // default output style: brief, digest, status, report, retro
 	AILanguage     string   `yaml:"ai_language"`              // output language passed to AI (e.g. "deutsch", "english")
+	AIHTTPTimeout  Duration `yaml:"ai_http_timeout"`          // HTTP timeout for API calls (default: 60s)
 }
 
 // DefaultConfig returns the default configuration.
@@ -41,7 +67,8 @@ func DefaultConfig() *Config {
 		AIModel:       "claude-sonnet-4-20250514",
 		AIBackend:     "cli",
 		AICLICommand:  "claude -p",
-		AILanguage:    "english", // default output language for AI summaries
+		AILanguage:    "english",                  // default output language for AI summaries
+		AIHTTPTimeout: Duration(60 * time.Second), // default: 60s
 	}
 }
 
@@ -163,6 +190,11 @@ week_start: monday
 # "api" calls an OpenAI-compatible API directly.
 # ai_backend: cli
 # ai_cli_command: claude -p            # CLI tool for ai_backend: cli
+#
+# HTTP timeout for API calls (default: 60s)
+# Increase this if your endpoint or proxy is slow.
+# Format: 30s, 1m, 5m, etc.
+# ai_http_timeout: 60s
 #
 # Output language for AI summaries (default: english)
 # Use full language names: deutsch, english, greek, etc.

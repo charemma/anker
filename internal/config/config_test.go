@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestDefaultConfig(t *testing.T) {
@@ -216,6 +217,58 @@ func TestDetectTimezone(t *testing.T) {
 	// Should not be "Local" (the raw Location.String() for local timezone)
 	if tz == "Local" {
 		t.Error("detectTimezone should convert 'Local' to 'UTC'")
+	}
+}
+
+func TestLoad_WithAIHTTPTimeout(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("IKNO_HOME", tmpDir)
+
+	tests := []struct {
+		name     string
+		yaml     string
+		expected Duration
+	}{
+		{
+			name:     "seconds",
+			yaml:     "ai_http_timeout: 30s",
+			expected: Duration(30 * time.Second),
+		},
+		{
+			name:     "minutes",
+			yaml:     "ai_http_timeout: 2m",
+			expected: Duration(2 * time.Minute),
+		},
+		{
+			name:     "mixed",
+			yaml:     "ai_http_timeout: 1m30s",
+			expected: Duration(90 * time.Second),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			configContent := "week_start: monday\n" + tt.yaml + "\n"
+			configPath := filepath.Join(tmpDir, "config.yaml")
+			if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+				t.Fatal(err)
+			}
+
+			cfg, err := Load()
+			if err != nil {
+				t.Fatalf("Load failed: %v", err)
+			}
+
+			if cfg.AIHTTPTimeout != tt.expected {
+				t.Errorf("expected ai_http_timeout %v, got %v", tt.expected, cfg.AIHTTPTimeout)
+			}
+
+			// Verify ToDuration() conversion works
+			if cfg.AIHTTPTimeout.ToDuration() != tt.expected.ToDuration() {
+				t.Errorf("ToDuration() mismatch: expected %v, got %v",
+					tt.expected.ToDuration(), cfg.AIHTTPTimeout.ToDuration())
+			}
+		})
 	}
 }
 

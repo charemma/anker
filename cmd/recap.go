@@ -170,15 +170,16 @@ Examples:
 
 		period := fmt.Sprintf("%s (%s to %s)", timespec, tr.From.Format("2006-01-02"), tr.To.Format("2006-01-02"))
 		return ai.Transform(context.Background(), os.Stdout, buf.String(), period, ai.TransformConfig{
-			AIPrompt:     cfg.AIPrompt,
-			AIBackend:    cfg.AIBackend,
-			AICLICommand: cfg.AICLICommand,
-			AIBaseURL:    cfg.AIBaseURL,
-			AIModel:      cfg.AIModel,
-			AIAPIKey:     cfg.AIAPIKey,
-			EntryCount:   len(result.Entries),
-			Style:        string(style),
-			Language:     lang,
+			AIPrompt:      cfg.AIPrompt,
+			AIBackend:     cfg.AIBackend,
+			AICLICommand:  cfg.AICLICommand,
+			AIBaseURL:     cfg.AIBaseURL,
+			AIModel:       cfg.AIModel,
+			AIAPIKey:      cfg.AIAPIKey,
+			AIHTTPTimeout: cfg.AIHTTPTimeout.ToDuration(),
+			EntryCount:    len(result.Entries),
+			Style:         string(style),
+			Language:      lang,
 		}, promptOverride, recapAPIKey)
 	},
 }
