@@ -45,6 +45,20 @@ func TestFindRepoRoot(t *testing.T) {
 			expectErr: false,
 		},
 		{
+			name: "finds bare git repo",
+			setup: func() string {
+				bareRepo := filepath.Join(tmpDir, "bare.git")
+				if err := os.MkdirAll(filepath.Join(bareRepo, "objects"), 0755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(filepath.Join(bareRepo, "HEAD"), []byte("ref: refs/heads/main\n"), 0644); err != nil {
+					t.Fatal(err)
+				}
+				return bareRepo
+			},
+			expectErr: false,
+		},
+		{
 			name: "returns error when not in git repo",
 			setup: func() string {
 				noGitDir := filepath.Join(tmpDir, "notarepo")
@@ -83,15 +97,16 @@ func TestFindRepoRoot(t *testing.T) {
 				return
 			}
 
+			// Verify result is a git repo: either has .git/ dir or is a bare repo (HEAD file + objects/ dir)
 			gitDir := filepath.Join(result, ".git")
-			info, err := os.Stat(gitDir)
-			if err != nil {
-				t.Errorf(".git directory not found at %s: %v", gitDir, err)
-				return
-			}
+			info, statErr := os.Stat(gitDir)
+			hasDotGit := statErr == nil && info.IsDir()
 
-			if !info.IsDir() {
-				t.Errorf(".git exists but is not a directory")
+			headInfo, headErr := os.Stat(filepath.Join(result, "HEAD"))
+			hasBare := headErr == nil && !headInfo.IsDir()
+
+			if !hasDotGit && !hasBare {
+				t.Errorf("result %s is neither a regular git repo (.git/) nor a bare repo (HEAD)", result)
 			}
 		})
 	}

@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/charemma/ikno/internal/git"
 )
 
 // DetectedSource is a candidate source found by auto-detection.
@@ -28,13 +30,17 @@ func DetectType(path string) ([]DetectedSource, error) {
 
 	var results []DetectedSource
 
-	hasGit := isDir(filepath.Join(abs, ".git"))
+	hasDotGit := isDir(filepath.Join(abs, ".git"))
+	hasBareGit := !hasDotGit && git.IsBareGitRepo(abs)
+	hasGit := hasDotGit || hasBareGit
 	hasObsidian := isDir(filepath.Join(abs, ".obsidian"))
 	hasClaude := isClaudePath(abs)
 
 	// git takes highest priority; obsidian is next. They are mutually exclusive.
-	if hasGit {
+	if hasDotGit {
 		results = append(results, DetectedSource{Path: abs, Type: "git", Reason: "found .git/"})
+	} else if hasBareGit {
+		results = append(results, DetectedSource{Path: abs, Type: "git", Reason: "found bare git repository"})
 	} else if hasObsidian {
 		results = append(results, DetectedSource{Path: abs, Type: "obsidian", Reason: "found .obsidian/"})
 	}

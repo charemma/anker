@@ -241,8 +241,8 @@ func initScanHome(home string, maxDepth int, showProgress bool) scanResults {
 				return filepath.SkipDir
 			}
 
-			// Check for .git directory (don't recurse into the repo).
-			hasGit := initDirExists(filepath.Join(path, ".git"))
+			// Check for .git directory or bare git repo (don't recurse into the repo).
+			hasGit := initDirExists(filepath.Join(path, ".git")) || git.IsBareGitRepo(path)
 			hasObsidian := initDirExists(filepath.Join(path, ".obsidian"))
 
 			if hasGit {
