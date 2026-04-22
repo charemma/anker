@@ -4,8 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestBuildRequest_BasicFields(t *testing.T) {
@@ -109,6 +112,47 @@ func TestStreamCompletion_MissingBaseURL(t *testing.T) {
 	err := c.StreamCompletion(context.Background(), "prompt", "content", io.Discard)
 	if err == nil {
 		t.Fatal("expected error for missing base URL")
+	}
+}
+
+func TestStreamCompletion_HeaderTimeout(t *testing.T) {
+	// Server that accepts the connection but never sends response headers,
+	// simulating a hung or malicious endpoint. A client without a header
+	// timeout would block here indefinitely. The handler unblocks on
+	// either request-context cancel or a hard ceiling as a safety net.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-r.Context().Done():
+		case <-time.After(500 * time.Millisecond):
+		}
+	}))
+	// ResponseHeaderTimeout reports the error to the caller but does not
+	// actively close the socket, so httptest.Server.Close() would block
+	// on the still-active connection. CloseClientConnections releases it.
+	defer func() {
+		server.CloseClientConnections()
+		server.Close()
+	}()
+
+	origClient := httpClient
+	httpClient = &http.Client{
+		Transport: &http.Transport{
+			ResponseHeaderTimeout: 100 * time.Millisecond,
+		},
+	}
+	defer func() { httpClient = origClient }()
+
+	c := &Client{BaseURL: server.URL + "/v1/", APIKey: "x", Model: "test"}
+
+	start := time.Now()
+	err := c.StreamCompletion(context.Background(), "prompt", "content", io.Discard)
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected timeout error, got nil")
+	}
+	if elapsed > time.Second {
+		t.Errorf("expected fail within ~100ms header timeout, got %v", elapsed)
 	}
 }
 
