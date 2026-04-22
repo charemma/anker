@@ -201,3 +201,45 @@ data: [DONE]
 		t.Errorf("expected 'ok', got %q", got)
 	}
 }
+
+func TestStreamCompletion_CustomTimeout(t *testing.T) {
+	// Server that accepts the connection but hangs before sending headers
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-r.Context().Done():
+		case <-time.After(500 * time.Millisecond):
+		}
+	}))
+	defer func() {
+		server.CloseClientConnections()
+		server.Close()
+	}()
+
+	// Create a Client with a custom short timeout
+	customClient := newHTTPClientWithTimeout(50 * time.Millisecond)
+	client := &Client{
+		BaseURL:    server.URL + "/v1/",
+		APIKey:     "test-key",
+		Model:      "test-model",
+		httpClient: customClient,
+	}
+
+	start := time.Now()
+	err := client.StreamCompletion(context.Background(), "prompt", "content", io.Discard)
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected timeout error, got nil")
+	}
+
+	// Verify it's a timeout error
+	var netErr net.Error
+	if !errors.As(err, &netErr) || !netErr.Timeout() {
+		t.Errorf("expected timeout error, got: %v", err)
+	}
+
+	// Verify the timeout occurred within a reasonable time
+	if elapsed > 200*time.Millisecond {
+		t.Errorf("expected timeout within 200ms, took %v", elapsed)
+	}
+}

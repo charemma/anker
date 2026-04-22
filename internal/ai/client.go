@@ -32,10 +32,24 @@ var httpClient = func() *http.Client {
 	return &http.Client{Transport: transport}
 }()
 
+// newHTTPClientWithTimeout creates an HTTP client with a custom ResponseHeaderTimeout.
+// It clones http.DefaultTransport to preserve proxy support and system settings.
+func newHTTPClientWithTimeout(timeout time.Duration) *http.Client {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.DialContext = (&net.Dialer{
+		Timeout: 10 * time.Second,
+	}).DialContext
+	transport.ResponseHeaderTimeout = timeout
+	transport.TLSHandshakeTimeout = 10 * time.Second
+	transport.IdleConnTimeout = 30 * time.Second
+	return &http.Client{Transport: transport}
+}
+
 type Client struct {
-	BaseURL string
-	APIKey  string
-	Model   string
+	BaseURL    string
+	APIKey     string
+	Model      string
+	httpClient *http.Client // optional; if nil, uses the global default
 }
 
 type chatRequest struct {
@@ -68,7 +82,12 @@ func (c *Client) StreamCompletion(ctx context.Context, systemPrompt, userContent
 		return err
 	}
 
-	resp, err := httpClient.Do(req)
+	client := httpClient
+	if c.httpClient != nil {
+		client = c.httpClient
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("API request failed: %w", err)
 	}

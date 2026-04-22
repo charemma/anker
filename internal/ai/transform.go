@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/charemma/ikno/internal/ui"
 	"github.com/charmbracelet/glamour"
@@ -35,15 +36,16 @@ Rules:
 // TransformConfig holds the AI-related fields needed by Transform.
 // This avoids importing the config package directly.
 type TransformConfig struct {
-	AIPrompt     string
-	AIBackend    string
-	AICLICommand string
-	AIBaseURL    string
-	AIModel      string
-	AIAPIKey     string
-	EntryCount   int    // shown in the footer line
-	Style        string // shown in the status line
-	Language     string // shown in the status line
+	AIPrompt      string
+	AIBackend     string
+	AICLICommand  string
+	AIBaseURL     string
+	AIModel       string
+	AIAPIKey      string
+	AIHTTPTimeout time.Duration
+	EntryCount    int    // shown in the footer line
+	Style         string // shown in the status line
+	Language      string // shown in the status line
 }
 
 // Transform sends rendered recap text through an AI backend for summarization.
@@ -89,9 +91,10 @@ func Transform(ctx context.Context, w io.Writer, renderedText string, period str
 		}
 
 		client := &Client{
-			BaseURL: cfg.AIBaseURL,
-			APIKey:  apiKey,
-			Model:   cfg.AIModel,
+			BaseURL:    cfg.AIBaseURL,
+			APIKey:     apiKey,
+			Model:      cfg.AIModel,
+			httpClient: newHTTPClientWithTimeout(cfg.AIHTTPTimeout),
 		}
 		err = client.StreamCompletion(ctx, prompt, renderedText, &aiOut)
 	}
