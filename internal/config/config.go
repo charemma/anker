@@ -13,21 +13,46 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Duration wraps time.Duration to provide YAML unmarshaling support.
+// YAML can parse strings like "60s", "1m", "5m" into time.Duration.
+type Duration time.Duration
+
+// UnmarshalYAML implements yaml.Unmarshaler for Duration.
+func (d *Duration) UnmarshalYAML(value *yaml.Node) error {
+	var s string
+	if err := value.Decode(&s); err != nil {
+		return err
+	}
+
+	parsed, err := time.ParseDuration(s)
+	if err != nil {
+		return fmt.Errorf("invalid duration format: %w", err)
+	}
+
+	*d = Duration(parsed)
+	return nil
+}
+
+// ToDuration converts Duration to time.Duration.
+func (d Duration) ToDuration() time.Duration {
+	return time.Duration(d)
+}
+
 // Config holds user configuration for ikno.
 type Config struct {
-	WeekStart      string        `yaml:"week_start"`               // "monday" or "sunday"
-	AuthorEmail    string        `yaml:"author_email,omitempty"`   // default git author email for filtering
-	AuthorAliases  []string      `yaml:"author_aliases,omitempty"` // additional author emails for multi-identity matching
-	Timezone       string        `yaml:"timezone,omitempty"`       // timezone (auto-detected from system if not set)
-	AIBaseURL      string        `yaml:"ai_base_url"`              // OpenAI-compatible API base URL
-	AIModel        string        `yaml:"ai_model"`                 // model name for AI summaries
-	AIAPIKey       string        `yaml:"ai_api_key"`               // API key (prefer env var AI_API_KEY)
-	AIPrompt       string        `yaml:"ai_prompt"`                // custom prompt for AI summaries
-	AIBackend      string        `yaml:"ai_backend"`               // "api" or "cli"
-	AICLICommand   string        `yaml:"ai_cli_command"`           // CLI tool for ai_backend: cli
-	AIDefaultStyle string        `yaml:"ai_default_style"`         // default output style: brief, digest, status, report, retro
-	AILanguage     string        `yaml:"ai_language"`              // output language passed to AI (e.g. "deutsch", "english")
-	AIHTTPTimeout  time.Duration `yaml:"ai_http_timeout"`          // HTTP timeout for API calls (default: 60s)
+	WeekStart      string   `yaml:"week_start"`               // "monday" or "sunday"
+	AuthorEmail    string   `yaml:"author_email,omitempty"`   // default git author email for filtering
+	AuthorAliases  []string `yaml:"author_aliases,omitempty"` // additional author emails for multi-identity matching
+	Timezone       string   `yaml:"timezone,omitempty"`       // timezone (auto-detected from system if not set)
+	AIBaseURL      string   `yaml:"ai_base_url"`              // OpenAI-compatible API base URL
+	AIModel        string   `yaml:"ai_model"`                 // model name for AI summaries
+	AIAPIKey       string   `yaml:"ai_api_key"`               // API key (prefer env var AI_API_KEY)
+	AIPrompt       string   `yaml:"ai_prompt"`                // custom prompt for AI summaries
+	AIBackend      string   `yaml:"ai_backend"`               // "api" or "cli"
+	AICLICommand   string   `yaml:"ai_cli_command"`           // CLI tool for ai_backend: cli
+	AIDefaultStyle string   `yaml:"ai_default_style"`         // default output style: brief, digest, status, report, retro
+	AILanguage     string   `yaml:"ai_language"`              // output language passed to AI (e.g. "deutsch", "english")
+	AIHTTPTimeout  Duration `yaml:"ai_http_timeout"`          // HTTP timeout for API calls (default: 60s)
 }
 
 // DefaultConfig returns the default configuration.
@@ -42,8 +67,8 @@ func DefaultConfig() *Config {
 		AIModel:       "claude-sonnet-4-20250514",
 		AIBackend:     "cli",
 		AICLICommand:  "claude -p",
-		AILanguage:    "english", // default output language for AI summaries
-		AIHTTPTimeout: 60 * time.Second,
+		AILanguage:    "english",                  // default output language for AI summaries
+		AIHTTPTimeout: Duration(60 * time.Second), // default: 60s
 	}
 }
 

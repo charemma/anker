@@ -176,7 +176,7 @@ Examples:
 			AIBaseURL:     cfg.AIBaseURL,
 			AIModel:       cfg.AIModel,
 			AIAPIKey:      cfg.AIAPIKey,
-			AIHTTPTimeout: cfg.AIHTTPTimeout,
+			AIHTTPTimeout: cfg.AIHTTPTimeout.ToDuration(),
 			EntryCount:    len(result.Entries),
 			Style:         string(style),
 			Language:      lang,
